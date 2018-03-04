@@ -10,8 +10,17 @@ int main() {
 		std::cerr << error.what() << std::endl;
 		return EXIT_FAILURE;
 	}
+	int i;
+	std::cin >> i;
 	return EXIT_SUCCESS;
 }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////							Main Functions
+////	
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Application::run()
 {
@@ -19,6 +28,7 @@ void Application::run()
 	initialize_vulkan();
 	main_loop();
 	clean_up();
+
 }
 
 void Application::initialize_window()
@@ -33,10 +43,20 @@ void Application::initialize_window()
 void Application::initialize_vulkan()
 {
 	create_instance();
+	setup_debug_callback();
+	pick_physical_device();
+}
+
+void Application::main_loop()
+{
+	while (!glfwWindowShouldClose(m_window)) {
+		glfwPollEvents();
+	}
 }
 
 void Application::create_instance()
 {
+	//Check if debug mode is active and check if the validation layers are supported
 	if (enableValidationLayers && !check_validation_layer_support()) {
 		throw std::runtime_error("Requested validation layers not available");
 	}
@@ -53,13 +73,6 @@ void Application::create_instance()
 	create_information.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	create_information.pApplicationInfo = &application_info;
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
-	////																								////
-	////										Extensions												////
-	////																								////
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 	std::vector<const char*> required_extensions = get_required_extensions();
 	if (!check_extension_support(required_extensions)) {
 		throw std::runtime_error("Not all required extensions are supported by the system.");
@@ -67,7 +80,13 @@ void Application::create_instance()
 
 	create_information.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
 	create_information.ppEnabledExtensionNames = required_extensions.data();
-	create_information.enabledLayerCount = 0;
+	if (enableValidationLayers) {
+		create_information.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
+		create_information.ppEnabledLayerNames = validation_layers.data();
+	}
+	else {
+		create_information.enabledLayerCount = 0;
+	}
 
 	if (vkCreateInstance(&create_information, nullptr, &m_instance) != VK_SUCCESS) {
 		throw std::runtime_error("VK_INSTANCE creation failed");
@@ -77,40 +96,34 @@ void Application::create_instance()
 	}
 }
 
-void Application::main_loop()
+
+
+
+void Application::setup_debug_callback()
 {
-	while (!glfwWindowShouldClose(m_window)) {
-		glfwPollEvents();
+	if (!enableValidationLayers) return;
+	VkDebugReportCallbackCreateInfoEXT create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+	create_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+	create_info.pfnCallback = debug_callback;
+
+	if (CreateDebugReportCallbackEXT(m_instance, &create_info, nullptr, &callback) != VK_SUCCESS) {
+		throw std::runtime_error("failed to set up debug callback!");
 	}
 }
 
-void Application::clean_up()
+
+
+void Application::pick_physical_device()
 {
-	vkDestroyInstance(m_instance, nullptr);
-	glfwDestroyWindow(m_window);
-	glfwTerminate();
+
 }
 
-DWORD Application::enable_virtual_terminal() {
-	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	if (hOut == INVALID_HANDLE_VALUE)
-	{
-		return GetLastError();
-	}
-
-	DWORD dwMode = 0;
-	if (!GetConsoleMode(hOut, &dwMode))
-	{
-		return GetLastError();
-	}
-
-	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-	if (!SetConsoleMode(hOut, dwMode))
-	{
-		return GetLastError();
-	}
-	return 1;
-}
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////							Extensions and Layers
+////	
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::vector<const char*> Application::get_required_extensions()
 {
@@ -121,7 +134,7 @@ std::vector<const char*> Application::get_required_extensions()
 
 	std::vector<const char*> final_required_extensions(glfw_extension_names, glfw_extension_names + glfw_required_extension_count);
 
-	if(enableValidationLayers)
+	if (enableValidationLayers)
 		final_required_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 
 	return final_required_extensions;
@@ -150,7 +163,7 @@ bool Application::check_extension_support(std::vector<const char*> required_exte
 	for (const auto& extension : supported_extensions) {
 		bool required_extension = false;
 		for (const char* required_extension_name : required_extensions) {
-			if (strcmp(required_extension_name, extension.extensionName)==0) {
+			if (strcmp(required_extension_name, extension.extensionName) == 0) {
 				++supported_required_extension_counter;
 				required_extension = true;
 			}
@@ -177,9 +190,55 @@ bool Application::check_validation_layer_support()
 			}
 		}
 		if (!layer_found) {
+			std::cout << "Validation layers not supported" << std::endl;
 			return false;
 		}
 	}
-
+	std::cout << "Validation layers supported" << std::endl;
 	return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////							Vulkan Helper Stuff
+////	
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+VkResult Application::CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT * pCreateInfo, const VkAllocationCallbacks * pAllocator, VkDebugReportCallbackEXT * pCallback) {
+	auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+	if (func != nullptr) {
+		return func(instance, pCreateInfo, pAllocator, pCallback);
+	}
+	else {
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
+	}
+}
+
+void Application::DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks * pAllocator) {
+	auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
+	if (func != nullptr) {
+		func(instance, callback, pAllocator);
+	}
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
+{
+	std::cerr << "validation layer: " << msg << std::endl;
+
+	return VK_FALSE;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////							Cleanup
+////	
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Application::clean_up()
+{
+	DestroyDebugReportCallbackEXT(m_instance, callback, nullptr);
+
+	vkDestroyInstance(m_instance, nullptr);
+	glfwDestroyWindow(m_window);
+	glfwTerminate();
 }

@@ -15,16 +15,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="D:\FMP\MediocreVulkanFramework\MediocreVulkanFramework\application.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClInclude Include="application.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="helper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="D:\FMP\MediocreVulkanFramework\MediocreVulkanFramework\helper.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="D:\FMP\MediocreVulkanFramework\MediocreVulkanFramework\application.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <ClCompile Include="application.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
