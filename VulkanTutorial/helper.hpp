@@ -36,7 +36,7 @@ const char* esc_char = { "\x1b[" };
 const char  esc_color_end_char = 'm';
 const char	esc_color_reset_char = '0';
 
-template <class U> void dout(U value, console_colors_foreground foreground_color_code = console_colors_foreground::white, console_colors_background background_color_code = console_colors_background::black) {
+template <class T> void info(T value, console_colors_foreground foreground_color_code = console_colors_foreground::white, console_colors_background background_color_code = console_colors_background::black) {
 	#ifdef _DEBUG
 	//reset the colors
 	std::cout << esc_char << esc_color_reset_char << esc_color_end_char;
@@ -45,6 +45,18 @@ template <class U> void dout(U value, console_colors_foreground foreground_color
 	//then display the message
 	std::cout << value << std::endl;
 	#endif // !_DEBUG
+}
+
+template <class T> void warn(T value) {
+	info(value, console_colors_foreground::yellow);
+}
+
+template <class T> void err(T value) {
+	info(value, console_colors_foreground::red);
+}
+
+template <class T> void succ(T value) {
+	info(value, console_colors_foreground::green);
 }
 
 #endif

@@ -2,10 +2,12 @@
 
 int main() {
 	Application application;
+#ifdef DEBUG
 	enable_virtual_terminal();
+#endif // DEBUG
+
 
 	try {
-		dout("oy vey", console_colors_foreground::cyan, console_colors_background::purple);
 		application.run();
 	}
 	catch (const std::runtime_error &error) {
@@ -47,6 +49,7 @@ void Application::initialize_vulkan()
 	create_instance();
 	setup_debug_callback();
 	pick_physical_device();
+	create_logical_device();
 }
 
 void Application::main_loop()
@@ -94,13 +97,9 @@ void Application::create_instance()
 		throw std::runtime_error("VK_INSTANCE creation failed");
 	}
 	else {
-		dout("VK_INSTANCE creation successful");
+		succ("VK_INSTANCE creation successful");
 	}
 }
-
-
-
-
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,10 +125,10 @@ std::vector<const char*> Application::get_required_extensions()
 
 bool Application::check_extension_support(std::vector<const char*> required_extensions) {
 
-	dout("Required Extensions:");
+	info("Required Extensions:");
 	for (const char* extension_name : required_extensions)
 	{
-		dout(std::string("\t") + extension_name);
+		info(std::string("\t") + extension_name);
 	}
 	//get number of supported extensions
 	uint32_t supported_extension_count = 0;
@@ -141,7 +140,7 @@ bool Application::check_extension_support(std::vector<const char*> required_exte
 	std::sort(supported_extensions.begin(), supported_extensions.end(), compare_extensions);
 
 	//list supported extensions
-	dout("Supported Extensions:");
+	info("Supported Extensions:");
 	short supported_required_extension_counter = 0;
 	for (const auto& extension : supported_extensions) {
 		bool required_extension = false;
@@ -151,7 +150,8 @@ bool Application::check_extension_support(std::vector<const char*> required_exte
 				required_extension = true;
 			}
 		}
-		dout((std::string("\t") + extension.extensionName) + " V" + std::to_string(extension.specVersion), required_extension ? console_colors_foreground::green : console_colors_foreground::white);
+		std::string extension_output = (std::string("\t") + extension.extensionName) + " V" + std::to_string(extension.specVersion);
+		required_extension ? succ(extension_output) : info(extension_output);
 	}
 	return (supported_required_extension_counter == required_extensions.size());
 }
@@ -186,11 +186,11 @@ bool Application::check_validation_layer_support()
 			}
 		}
 		if (!layer_found) {
-			dout("Validation layers not supported");
+			warn("Validation layers not supported");
 			return false;
 		}
 	}
-	dout("Validation layers supported");
+	succ("Validation layers supported");
 	return true;
 }
 
@@ -211,7 +211,7 @@ void Application::pick_physical_device()
 
 	std::multimap<int, VkPhysicalDevice> gpu_candidates;
 
-	dout("Found GPUs:");
+	info("Found GPUs:");
 
 	for (const auto& device : physical_devices_found) {
 		gpu_candidates.insert(std::make_pair(evaluate_physical_device_capabilities(device), device));
@@ -219,7 +219,12 @@ void Application::pick_physical_device()
 
 	if (gpu_candidates.rbegin()->first > 0) {
 		m_physical_device = gpu_candidates.rbegin()->second;
-		dout();
+#ifdef _DEBUG
+		VkPhysicalDeviceProperties device_properties;
+		vkGetPhysicalDeviceProperties(m_physical_device, &device_properties);
+
+		succ(std::string("Selected ") + device_properties.deviceName);
+#endif
 	}
 
 	if (m_physical_device == VK_NULL_HANDLE) {
@@ -250,12 +255,49 @@ int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical
 		break;
 	}
 	score += device_properties.limits.maxImageDimension2D;
-	if (!device_features.geometryShader) {
+	if (!device_features.geometryShader || find_queue_families(physical_device).isComplete()) {
 		score = 0;
-		dout(std::string(device_properties.deviceName) + " has no geometry shader and is therefore scoring " + std::to_string(score), console_colors_foreground::red);
+		warn(std::string(device_properties.deviceName) + " has no geometry shader and is therefore scoring " + std::to_string(score));
 	}
-	dout(std::string("\t") + device_properties.deviceName + std::string(" is scoring ") + std::to_string(score));
+	info(std::string("\t") + device_properties.deviceName + std::string(" is scoring ") + std::to_string(score));
 	return score;
+}
+
+void Application::create_logical_device()
+{
+	QueueFamilyIndices indices = find_queue_families(m_physical_device);
+
+	VkDeviceQueueCreateInfo queue_create_info = {};
+	queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queue_create_info.queueFamilyIndex = indices.graphics_family;
+	queue_create_info.queueCount = 1;
+
+	float queue_priority = 1.0f;
+
+	queue_create_info.pQueuePriorities = &queue_priority;
+
+	VkPhysicalDeviceFeatures device_features = {};
+
+	VkDeviceCreateInfo logical_device_create_info = {};
+	logical_device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+	logical_device_create_info.pQueueCreateInfos = &queue_create_info;
+	logical_device_create_info.queueCreateInfoCount = 1;
+
+	logical_device_create_info.pEnabledFeatures = &device_features;
+	logical_device_create_info.enabledExtensionCount = 0;
+	if (enableValidationLayers) {
+		logical_device_create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
+		logical_device_create_info.ppEnabledLayerNames = validation_layers.data();
+	}
+	else
+	{
+		logical_device_create_info.enabledLayerCount = 0;
+	}
+
+	if (vkCreateDevice(m_physical_device, &logical_device_create_info, nullptr, &m_logical_device) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create logical device");
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -264,7 +306,7 @@ int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical
 ////	
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-QueueFamilyIndices Application::findQueueFamilies(VkPhysicalDevice physical_device)
+QueueFamilyIndices Application::find_queue_families(VkPhysicalDevice physical_device)
 {
 	QueueFamilyIndices indices;
 
@@ -273,10 +315,20 @@ QueueFamilyIndices Application::findQueueFamilies(VkPhysicalDevice physical_devi
 
 	std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families.data());
+	int i = 0;
+	for (const auto& queue_family : queue_families) {
+		queue_family.
+		if (queue_family.queueCount > 0 && queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			indices.graphics_family = i;
+		}
 
+		if (indices.isComplete()) {
+			break;
+		}
+		i++;
+	}
 	return indices;
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
@@ -318,6 +370,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT
 
 void Application::clean_up()
 {
+	vkDestroyDevice(m_logical_device, nullptr);
 	DestroyDebugReportCallbackEXT(m_instance, callback, nullptr);
 
 	vkDestroyInstance(m_instance, nullptr);

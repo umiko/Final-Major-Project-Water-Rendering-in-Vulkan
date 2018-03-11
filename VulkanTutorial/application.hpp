@@ -38,6 +38,7 @@ private:
 	const char* APPLICATION_NAME = "Vulkan Playground";
 	VkInstance m_instance;
 	VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
+	VkDevice m_logical_device;
 
 	VkDebugReportCallbackEXT callback;
 
@@ -72,8 +73,8 @@ private:
 	void pick_physical_device();
 	int evaluate_physical_device_capabilities(VkPhysicalDevice device);
 
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physical_device);
-
+	QueueFamilyIndices find_queue_families(VkPhysicalDevice physical_device);
+	void create_logical_device();
 };
 
 #endif // !APPLICATION_HPP
