@@ -38,12 +38,13 @@ const char	esc_color_reset_char = '0';
 
 template <class T> void info(T value, console_colors_foreground foreground_color_code = console_colors_foreground::white, console_colors_background background_color_code = console_colors_background::black) {
 	#ifdef _DEBUG
-	//reset the colors
-	std::cout << esc_char << esc_color_reset_char << esc_color_end_char;
 	//first, set the wanted colours
 	std::cout << esc_char << (int)foreground_color_code << ';' << (int)background_color_code << esc_color_end_char; 
 	//then display the message
 	std::cout << value << std::endl;
+	//reset the colors
+	std::cout << esc_char << esc_color_reset_char << esc_color_end_char;
+
 	#endif // !_DEBUG
 }
 

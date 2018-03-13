@@ -79,7 +79,15 @@ void Application::create_instance()
 	create_information.pApplicationInfo = &application_info;
 
 	std::vector<const char*> required_extensions = get_required_extensions();
-	if (!check_extension_support(required_extensions)) {
+	//get number of supported extensions
+	uint32_t supported_extension_count = 0;
+	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, nullptr);
+	//enumerate supported extensions
+	std::vector<VkExtensionProperties> supported_extensions(supported_extension_count);
+	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, supported_extensions.data());
+
+
+	if (!check_extension_support(required_extensions, supported_extensions)) {
 		throw std::runtime_error("Not all required extensions are supported by the system.");
 	}
 
@@ -123,37 +131,29 @@ std::vector<const char*> Application::get_required_extensions()
 	return final_required_extensions;
 }
 
-bool Application::check_extension_support(std::vector<const char*> required_extensions) {
-
-	info("Required Extensions:");
-	for (const char* extension_name : required_extensions)
-	{
-		info(std::string("\t") + extension_name);
-	}
-	//get number of supported extensions
-	uint32_t supported_extension_count = 0;
-	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, nullptr);
-
-	//enumerate supported extensions and sort it alphabetically
-	std::vector<VkExtensionProperties> supported_extensions(supported_extension_count);
-	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, supported_extensions.data());
-	std::sort(supported_extensions.begin(), supported_extensions.end(), compare_extensions);
-
+bool Application::check_extension_support(std::vector<const char*> required_extensions, std::vector<VkExtensionProperties> supported_extensions) {
 	//list supported extensions
-	info("Supported Extensions:");
-	short supported_required_extension_counter = 0;
-	for (const auto& extension : supported_extensions) {
-		bool required_extension = false;
-		for (const char* required_extension_name : required_extensions) {
-			if (strcmp(required_extension_name, extension.extensionName) == 0) {
-				++supported_required_extension_counter;
-				required_extension = true;
+	info("Extension Support:");
+	bool required_extension_supported = false;
+	//outer loop is required extensions, if one isnt fulfilled it breaks and returns false, otherwise returns true.
+	for (const char* required_extension_name : required_extensions) {
+		//reset supported extension flag
+		required_extension_supported = false;
+		for (const auto& supported_extension : supported_extensions) {
+			//extension supported, why bother going further?
+			if (strcmp(required_extension_name, supported_extension.extensionName) == 0) {
+				required_extension_supported = true;
+				break;
 			}
 		}
-		std::string extension_output = (std::string("\t") + extension.extensionName) + " V" + std::to_string(extension.specVersion);
-		required_extension ? succ(extension_output) : info(extension_output);
+		std::string extension_output = (std::string("\t") + required_extension_name);
+		required_extension_supported ? succ(extension_output) : warn(extension_output);
+		//dont bother going further if a requested extension failed
+		if (!required_extension_supported) {
+			break;
+		}
 	}
-	return (supported_required_extension_counter == required_extensions.size());
+	return required_extension_supported;
 }
 
 void Application::setup_debug_callback()
@@ -228,6 +228,7 @@ void Application::pick_physical_device()
 	}
 
 	if (m_physical_device == VK_NULL_HANDLE) {
+		err("No suitable GPU found, throwing exception...");
 		throw std::runtime_error("Your GPU is not suitable");
 	}
 }

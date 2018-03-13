@@ -55,6 +55,8 @@ private:
 		"VK_LAYER_LUNARG_standard_validation"
 	};
 
+	const std::vector<const char*> device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
 #else
@@ -70,7 +72,7 @@ private:
 		//collects all required extensions in one vector for easy comparison later on
 		std::vector<const char*> get_required_extensions();
 			//checks if the given required extensions are supported by the system
-			bool check_extension_support(std::vector<const char*> required_extensions);
+			bool check_extension_support(std::vector<const char*> required_extensions, std::vector<VkExtensionProperties> supported_extensions);
 			//checks if the validation layers are supported
 			bool check_validation_layer_support();
 
