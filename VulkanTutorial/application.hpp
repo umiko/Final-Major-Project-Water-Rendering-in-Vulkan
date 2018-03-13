@@ -10,6 +10,7 @@
 #include <Windows.h>
 #include <string_view>
 #include <map>
+#include <set>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -19,9 +20,10 @@
 
 struct QueueFamilyIndices {
 	int graphics_family = -1;
+	int presentation_family = -1;
 
 	bool isComplete() {
-		return graphics_family >= 0;
+		return graphics_family >= 0 && presentation_family >=0;
 	}
 };
 
@@ -39,8 +41,15 @@ private:
 	VkInstance m_instance;
 	VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
 	VkDevice m_logical_device;
+	VkQueue m_graphics_queue;
+	VkQueue m_presentation_queue;
+
+	//Debug stuff
 
 	VkDebugReportCallbackEXT callback;
+
+	VkSurfaceKHR m_surface;
+
 
 	const std::vector<const char*> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -58,23 +67,34 @@ private:
 	void clean_up();
 
 	void create_instance();
-	//collects all required extensions in one vector for easy comparison later on
-	std::vector<const char*> get_required_extensions();
-	//checks if the given required extensions are supported by the system
-	bool check_extension_support(std::vector<const char*> required_extensions);
-	//checks if the validation layers are supported
+		//collects all required extensions in one vector for easy comparison later on
+		std::vector<const char*> get_required_extensions();
+			//checks if the given required extensions are supported by the system
+			bool check_extension_support(std::vector<const char*> required_extensions);
+			//checks if the validation layers are supported
+			bool check_validation_layer_support();
 
-	bool check_validation_layer_support();
 	void setup_debug_callback();
-	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
-	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
-	void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
+		static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
+		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
+		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
+		
+	void create_surface();
+
 
 	void pick_physical_device();
-	int evaluate_physical_device_capabilities(VkPhysicalDevice device);
+		//scores the physical devices of the system
+		int evaluate_physical_device_capabilities(VkPhysicalDevice device);
 
-	QueueFamilyIndices find_queue_families(VkPhysicalDevice physical_device);
 	void create_logical_device();
+		QueueFamilyIndices find_queue_families(VkPhysicalDevice physical_device);
+
+
+	
+
+	
+
+	
 };
 
 #endif // !APPLICATION_HPP

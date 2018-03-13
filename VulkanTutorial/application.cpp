@@ -2,7 +2,7 @@
 
 int main() {
 	Application application;
-#ifdef DEBUG
+#ifdef _DEBUG
 	enable_virtual_terminal();
 #endif // DEBUG
 
@@ -32,7 +32,6 @@ void Application::run()
 	initialize_vulkan();
 	main_loop();
 	clean_up();
-
 }
 
 void Application::initialize_window()
@@ -48,6 +47,7 @@ void Application::initialize_vulkan()
 {
 	create_instance();
 	setup_debug_callback();
+	create_surface();
 	pick_physical_device();
 	create_logical_device();
 }
@@ -255,49 +255,63 @@ int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical
 		break;
 	}
 	score += device_properties.limits.maxImageDimension2D;
-	if (!device_features.geometryShader || find_queue_families(physical_device).isComplete()) {
+	if (!device_features.geometryShader || !find_queue_families(physical_device).isComplete()) {
 		score = 0;
-		warn(std::string(device_properties.deviceName) + " has no geometry shader and is therefore scoring " + std::to_string(score));
+		warn(std::string("\t") + device_properties.deviceName + " has failed queue checks and is therefore scoring " + std::to_string(score));
 	}
-	info(std::string("\t") + device_properties.deviceName + std::string(" is scoring ") + std::to_string(score));
+	else {
+		info(std::string("\t") + device_properties.deviceName + std::string(" is scoring ") + std::to_string(score));
+	}
 	return score;
+}
+
+void Application::create_surface()
+{
+	if (glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS) {
+		throw std::runtime_error("Window Surface creation failed");
+	}
 }
 
 void Application::create_logical_device()
 {
+	//redo the indices, selected device might be different than last checked one after all
 	QueueFamilyIndices indices = find_queue_families(m_physical_device);
 
-	VkDeviceQueueCreateInfo queue_create_info = {};
-	queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queue_create_info.queueFamilyIndex = indices.graphics_family;
-	queue_create_info.queueCount = 1;
+	std::vector<VkDeviceQueueCreateInfo> queue_create_informations;
+	std::set<int> unique_queue_families = { indices.graphics_family, indices.presentation_family };
 
 	float queue_priority = 1.0f;
-
-	queue_create_info.pQueuePriorities = &queue_priority;
+	for (int queue_family : unique_queue_families) {
+		VkDeviceQueueCreateInfo queue_create_info = {};
+		queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queue_create_info.queueFamilyIndex = queue_family;
+		queue_create_info.queueCount = 1;
+		queue_create_info.pQueuePriorities = &queue_priority;
+		queue_create_informations.push_back(queue_create_info);
+	}
 
 	VkPhysicalDeviceFeatures device_features = {};
 
 	VkDeviceCreateInfo logical_device_create_info = {};
 	logical_device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
-	logical_device_create_info.pQueueCreateInfos = &queue_create_info;
-	logical_device_create_info.queueCreateInfoCount = 1;
-
+	logical_device_create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_informations.size());
+	logical_device_create_info.pQueueCreateInfos = queue_create_informations.data();
 	logical_device_create_info.pEnabledFeatures = &device_features;
 	logical_device_create_info.enabledExtensionCount = 0;
+	logical_device_create_info.enabledLayerCount = 0;
+	//if validation layers are enabled overwrite the just set enabledLayerCount
 	if (enableValidationLayers) {
 		logical_device_create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
 		logical_device_create_info.ppEnabledLayerNames = validation_layers.data();
-	}
-	else
-	{
-		logical_device_create_info.enabledLayerCount = 0;
 	}
 
 	if (vkCreateDevice(m_physical_device, &logical_device_create_info, nullptr, &m_logical_device) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create logical device");
 	}
+	//single queue, therefore index 0
+	vkGetDeviceQueue(m_logical_device, indices.graphics_family, 0, &m_graphics_queue);
+	//single queue, therefore index 0
+	vkGetDeviceQueue(m_logical_device, indices.presentation_family, 0, &m_presentation_queue);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -313,19 +327,32 @@ QueueFamilyIndices Application::find_queue_families(VkPhysicalDevice physical_de
 	uint32_t queue_family_count = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
 
+	info("\tLooking for Queues...");
+
 	std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families.data());
-	int i = 0;
+	int queue_index = 0;
 	for (const auto& queue_family : queue_families) {
-		queue_family.
+		//Can it render???
 		if (queue_family.queueCount > 0 && queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			indices.graphics_family = i;
+			indices.graphics_family = queue_index;
+			info(std::string("\t\tQueue ") + std::to_string(queue_index) + " has a graphics bit");
+		}
+		//Can it present???
+		VkBool32 presentation_support = VK_FALSE;
+		vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, queue_index, m_surface, &presentation_support);
+
+
+		if (queue_family.queueCount > 0 && presentation_support != VK_FALSE) {
+			indices.presentation_family = queue_index;
+			info(std::string("\t\tQueue ") + std::to_string(queue_index) + " is able to present");
 		}
 
 		if (indices.isComplete()) {
+			succ(std::string("\t\tQueue ") + std::to_string(queue_index) + " is is a suitable queue, aborting search");
 			break;
 		}
-		i++;
+		queue_index++;
 	}
 	return indices;
 }
@@ -372,7 +399,7 @@ void Application::clean_up()
 {
 	vkDestroyDevice(m_logical_device, nullptr);
 	DestroyDebugReportCallbackEXT(m_instance, callback, nullptr);
-
+	vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
