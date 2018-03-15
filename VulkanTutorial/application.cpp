@@ -77,22 +77,14 @@ void Application::create_instance()
 	VkInstanceCreateInfo create_information = {};
 	create_information.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	create_information.pApplicationInfo = &application_info;
+	
+	std::vector<const char*> required_instance_extensions = get_required_instance_extensions();
 
-	std::vector<const char*> required_extensions = get_required_extensions();
-	//get number of supported extensions
-	uint32_t supported_extension_count = 0;
-	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, nullptr);
-	//enumerate supported extensions
-	std::vector<VkExtensionProperties> supported_extensions(supported_extension_count);
-	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, supported_extensions.data());
-
-
-	if (!check_extension_support(required_extensions, supported_extensions)) {
-		throw std::runtime_error("Not all required extensions are supported by the system.");
+	if (!check_instance_extension_support(required_instance_extensions)) {
+		throw std::runtime_error("Not all glfw required extensions are supported by the system.");
 	}
-
-	create_information.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
-	create_information.ppEnabledExtensionNames = required_extensions.data();
+	create_information.enabledExtensionCount = static_cast<uint32_t>(required_instance_extensions.size());
+	create_information.ppEnabledExtensionNames = required_instance_extensions.data();
 	if (enableValidationLayers) {
 		create_information.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
 		create_information.ppEnabledLayerNames = validation_layers.data();
@@ -116,7 +108,7 @@ void Application::create_instance()
 ////	
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::vector<const char*> Application::get_required_extensions()
+std::vector<const char*> Application::get_required_instance_extensions()
 {
 	uint32_t glfw_required_extension_count = 0;
 	const char** glfw_extension_names;
@@ -131,29 +123,14 @@ std::vector<const char*> Application::get_required_extensions()
 	return final_required_extensions;
 }
 
-bool Application::check_extension_support(std::vector<const char*> required_extensions, std::vector<VkExtensionProperties> supported_extensions) {
-	//list supported extensions
-	info("Extension Support:");
-	bool required_extension_supported = false;
-	//outer loop is required extensions, if one isnt fulfilled it breaks and returns false, otherwise returns true.
-	for (const char* required_extension_name : required_extensions) {
-		//reset supported extension flag
-		required_extension_supported = false;
-		for (const auto& supported_extension : supported_extensions) {
-			//extension supported, why bother going further?
-			if (strcmp(required_extension_name, supported_extension.extensionName) == 0) {
-				required_extension_supported = true;
-				break;
-			}
-		}
-		std::string extension_output = (std::string("\t") + required_extension_name);
-		required_extension_supported ? succ(extension_output) : warn(extension_output);
-		//dont bother going further if a requested extension failed
-		if (!required_extension_supported) {
-			break;
-		}
-	}
-	return required_extension_supported;
+bool Application::check_instance_extension_support(std::vector<const char*> required_extensions)
+{
+	uint32_t supported_extension_count = 0;
+	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, nullptr);
+	//enumerate supported extensions
+	std::vector<VkExtensionProperties> supported_extensions(supported_extension_count);
+	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, supported_extensions.data());
+	return check_extension_support(required_extensions, supported_extensions);
 }
 
 void Application::setup_debug_callback()
@@ -205,7 +182,7 @@ void Application::pick_physical_device()
 	uint32_t device_count = 0;
 	vkEnumeratePhysicalDevices(m_instance, &device_count, nullptr);
 	if (device_count == 0)
-		std::runtime_error("No devices with Vulkan support found. Get a decent GPU next time.");
+		throw std::runtime_error("No devices with Vulkan support found. Get a decent GPU next time.");
 	std::vector<VkPhysicalDevice> physical_devices_found(device_count);
 	vkEnumeratePhysicalDevices(m_instance, &device_count, physical_devices_found.data());
 
@@ -256,9 +233,18 @@ int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical
 		break;
 	}
 	score += device_properties.limits.maxImageDimension2D;
-	if (!device_features.geometryShader || !find_queue_families(physical_device).isComplete()) {
+
+	if (!device_features.geometryShader) {
+		score = 0;
+		warn(std::string("\t") + device_properties.deviceName + " has no geometry shader and is therefore scoring " + std::to_string(score));
+	}
+	if (!find_queue_families(physical_device).isComplete()) {
 		score = 0;
 		warn(std::string("\t") + device_properties.deviceName + " has failed queue checks and is therefore scoring " + std::to_string(score));
+	}
+	if (!check_device_extension_support(physical_device)) {
+		score = 0;
+		warn(std::string("\t") + device_properties.deviceName + " has failed extension checks and is therefore scoring " + std::to_string(score));
 	}
 	else {
 		info(std::string("\t") + device_properties.deviceName + std::string(" is scoring ") + std::to_string(score));
@@ -364,6 +350,41 @@ QueueFamilyIndices Application::find_queue_families(VkPhysicalDevice physical_de
 ////	
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+bool Application::check_extension_support(std::vector<const char*> required_extensions, std::vector<VkExtensionProperties> supported_extensions) {
+	//list supported extensions
+	info("Extension Support:");
+	bool required_extension_supported = false;
+	//outer loop is required extensions, if one isnt fulfilled it breaks and returns false, otherwise returns true.
+	for (const char* required_extension_name : required_extensions) {
+		//reset supported extension flag
+		required_extension_supported = false;
+		for (const auto& supported_extension : supported_extensions) {
+			//extension supported, why bother going further?
+			if (strcmp(required_extension_name, supported_extension.extensionName) == 0) {
+				required_extension_supported = true;
+				break;
+			}
+		}
+		std::string extension_output = (std::string("\t") + required_extension_name);
+		required_extension_supported ? succ(extension_output) : warn(extension_output);
+		//dont bother going further if a requested extension failed
+		if (!required_extension_supported) {
+			break;
+		}
+	}
+	return required_extension_supported;
+}
+
+bool Application::check_device_extension_support(VkPhysicalDevice physical_device)
+{
+	uint32_t extensionCount;
+	vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> supported_extensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extensionCount, supported_extensions.data());
+	return check_extension_support(device_extensions, supported_extensions);
+}
+
 VkResult Application::CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT * pCreateInfo, const VkAllocationCallbacks * pAllocator, VkDebugReportCallbackEXT * pCallback) {
 	auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
 	if (func != nullptr) {
@@ -380,8 +401,6 @@ void Application::DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugRepo
 		func(instance, callback, pAllocator);
 	}
 }
-
-
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
 {

@@ -69,10 +69,6 @@ private:
 	void clean_up();
 
 	void create_instance();
-		//collects all required extensions in one vector for easy comparison later on
-		std::vector<const char*> get_required_extensions();
-			//checks if the given required extensions are supported by the system
-			bool check_extension_support(std::vector<const char*> required_extensions, std::vector<VkExtensionProperties> supported_extensions);
 			//checks if the validation layers are supported
 			bool check_validation_layer_support();
 
@@ -94,8 +90,13 @@ private:
 
 	
 
-	
-
+	//Vulkan helper stuff thats not unvulkan enough to be declared just helper stuff
+	//collects all required extensions in one vector for easy comparison later on
+	std::vector<const char*> get_required_instance_extensions();
+	//checks if the given required extensions are supported by the system
+	bool check_extension_support(std::vector<const char*> required_extensions, std::vector<VkExtensionProperties> supported_extensions);
+	bool check_instance_extension_support(std::vector<const char*> required_extensions);
+	bool check_device_extension_support(VkPhysicalDevice physical_device);
 	
 };
 
