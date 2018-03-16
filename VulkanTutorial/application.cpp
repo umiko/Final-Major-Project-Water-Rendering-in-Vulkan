@@ -345,26 +345,13 @@ QueueFamilyIndices Application::find_queue_families(VkPhysicalDevice physical_de
 bool Application::check_extension_support(std::vector<const char*> required_extensions, std::vector<VkExtensionProperties> supported_extensions) {
 	//list supported extensions
 	info("Extension Support:");
-	bool required_extension_supported = false;
-	//outer loop is required extensions, if one isnt fulfilled it breaks and returns false, otherwise returns true.
-	for (const char* required_extension_name : required_extensions) {
-		//reset supported extension flag
-		required_extension_supported = false;
-		for (const auto& supported_extension : supported_extensions) {
-			//extension supported, why bother going further?
-			if (strcmp(required_extension_name, supported_extension.extensionName) == 0) {
-				required_extension_supported = true;
-				break;
-			}
-		}
-		std::string extension_output = (std::string("\t") + required_extension_name);
-		required_extension_supported ? succ(extension_output) : warn(extension_output);
-		//dont bother going further if a requested extension failed
-		if (!required_extension_supported) {
-			break;
-		}
+	std::set<std::string> required_extensions_set(required_extensions.begin(), required_extensions.end());
+	for (const auto& supported_extension : supported_extensions) {
+		std::string extension_output = (std::string("\t") + supported_extension.extensionName);
+		required_extensions_set.erase(supported_extension.extensionName) ? succ(extension_output) : info(extension_output);;
 	}
-	return required_extension_supported;
+	//if its empty all extensions are supported
+	return required_extensions_set.empty();
 }
 
 bool Application::check_device_extension_support(VkPhysicalDevice physical_device)
