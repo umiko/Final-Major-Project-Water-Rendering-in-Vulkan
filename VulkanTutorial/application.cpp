@@ -11,8 +11,8 @@ int main() {
 		application.run();
 	}
 	catch (const std::runtime_error &error) {
-		std::cerr << error.what() << std::endl;
-		return EXIT_FAILURE;
+		err(error.what());
+		//return EXIT_FAILURE;
 	}
 	int i;
 	std::cin >> i;
@@ -123,15 +123,7 @@ std::vector<const char*> Application::get_required_instance_extensions()
 	return final_required_extensions;
 }
 
-bool Application::check_instance_extension_support(std::vector<const char*> required_extensions)
-{
-	uint32_t supported_extension_count = 0;
-	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, nullptr);
-	//enumerate supported extensions
-	std::vector<VkExtensionProperties> supported_extensions(supported_extension_count);
-	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, supported_extensions.data());
-	return check_extension_support(required_extensions, supported_extensions);
-}
+
 
 void Application::setup_debug_callback()
 {
@@ -205,7 +197,6 @@ void Application::pick_physical_device()
 	}
 
 	if (m_physical_device == VK_NULL_HANDLE) {
-		err("No suitable GPU found, throwing exception...");
 		throw std::runtime_error("Your GPU is not suitable");
 	}
 }
@@ -314,16 +305,16 @@ QueueFamilyIndices Application::find_queue_families(VkPhysicalDevice physical_de
 	uint32_t queue_family_count = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
 
-	info("\tLooking for Queues...");
-
 	std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families.data());
+
+	info("Looking for Queues...");
 	int queue_index = 0;
 	for (const auto& queue_family : queue_families) {
 		//Can it render???
 		if (queue_family.queueCount > 0 && queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			indices.graphics_family = queue_index;
-			info(std::string("\t\tQueue ") + std::to_string(queue_index) + " has a graphics bit");
+			info(std::string("\tQueue ") + std::to_string(queue_index) + " has a graphics bit");
 		}
 		//Can it present???
 		VkBool32 presentation_support = VK_FALSE;
@@ -332,13 +323,14 @@ QueueFamilyIndices Application::find_queue_families(VkPhysicalDevice physical_de
 
 		if (queue_family.queueCount > 0 && presentation_support != VK_FALSE) {
 			indices.presentation_family = queue_index;
-			info(std::string("\t\tQueue ") + std::to_string(queue_index) + " is able to present");
+			info(std::string("\tQueue ") + std::to_string(queue_index) + " is able to present");
 		}
 
 		if (indices.isComplete()) {
-			succ(std::string("\t\tQueue ") + std::to_string(queue_index) + " is is a suitable queue, aborting search");
+			succ("\tQueues are suitable, aborting search");
 			break;
 		}
+
 		queue_index++;
 	}
 	return indices;
@@ -385,6 +377,29 @@ bool Application::check_device_extension_support(VkPhysicalDevice physical_devic
 	return check_extension_support(device_extensions, supported_extensions);
 }
 
+bool Application::check_instance_extension_support(std::vector<const char*> required_extensions)
+{
+	uint32_t supported_extension_count = 0;
+	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, nullptr);
+	//enumerate supported extensions
+	std::vector<VkExtensionProperties> supported_extensions(supported_extension_count);
+	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, supported_extensions.data());
+	return check_extension_support(required_extensions, supported_extensions);
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
+{
+	std::cerr << "Validation layer: " << msg << std::endl;
+
+	return VK_FALSE;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////							Proxy Functions
+////	
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
 VkResult Application::CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT * pCreateInfo, const VkAllocationCallbacks * pAllocator, VkDebugReportCallbackEXT * pCallback) {
 	auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
 	if (func != nullptr) {
@@ -400,13 +415,6 @@ void Application::DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugRepo
 	if (func != nullptr) {
 		func(instance, callback, pAllocator);
 	}
-}
-
-VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
-{
-	std::cerr << "Validation layer: " << msg << std::endl;
-
-	return VK_FALSE;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
