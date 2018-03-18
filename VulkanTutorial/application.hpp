@@ -7,10 +7,11 @@
 #include <vector>
 #include <algorithm>
 #include <string>
-#include <Windows.h>
+//#include <Windows.h>
 #include <string_view>
 #include <map>
 #include <set>
+#include <algorithm>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -25,6 +26,12 @@ struct QueueFamilyIndices {
 	bool isComplete() {
 		return graphics_family >= 0 && presentation_family >=0;
 	}
+};
+
+struct SwapChainSupportDetails {
+	VkSurfaceCapabilitiesKHR capabilities;
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> present_modes;
 };
 
 
@@ -49,6 +56,10 @@ private:
 	VkDebugReportCallbackEXT callback;
 
 	VkSurfaceKHR m_surface;
+	VkSwapchainKHR m_swapchain;
+	std::vector<VkImage> m_swapchain_images;
+	VkFormat m_swapchain_image_format;
+	VkExtent2D m_swapchain_extent;
 
 
 	const std::vector<const char*> validation_layers = {
@@ -79,7 +90,6 @@ private:
 		
 	void create_surface();
 
-
 	void pick_physical_device();
 		//scores the physical devices of the system
 		int evaluate_physical_device_capabilities(VkPhysicalDevice device);
@@ -87,8 +97,9 @@ private:
 	void create_logical_device();
 		QueueFamilyIndices find_queue_families(VkPhysicalDevice physical_device);
 
+		SwapChainSupportDetails query_swapchain_support(VkPhysicalDevice device);
 
-	
+	void create_swapchain();
 
 	//Vulkan helper stuff thats not unvulkan enough to be declared just helper stuff
 	//collects all required extensions in one vector for easy comparison later on
@@ -97,7 +108,10 @@ private:
 	bool check_extension_support(std::vector<const char*> required_extensions, std::vector<VkExtensionProperties> supported_extensions);
 	bool check_instance_extension_support(std::vector<const char*> required_extensions);
 	bool check_device_extension_support(VkPhysicalDevice physical_device);
-	
+	VkSurfaceFormatKHR choose_swapchain_surface_format(const std::vector<VkSurfaceFormatKHR> &available_formats);
+	VkPresentModeKHR choose_swapchain_present_mode(const std::vector<VkPresentModeKHR> available_present_modes);
+	VkExtent2D choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &capabilities);
+
 };
 
 #endif // !APPLICATION_HPP
