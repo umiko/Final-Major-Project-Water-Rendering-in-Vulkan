@@ -25,6 +25,13 @@
   <ItemGroup>
     <ClCompile Include="application.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\compile.bat" />
+    <None Include="shaders\frag.spv" />
+    <None Include="shaders\shader.frag" />
+    <None Include="shaders\shader.vert" />
+    <None Include="shaders\vert.spv" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{add10e8e-450b-49b1-b937-08eb44c70dcc}</ProjectGuid>

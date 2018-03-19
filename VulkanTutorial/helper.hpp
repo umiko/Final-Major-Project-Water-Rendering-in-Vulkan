@@ -2,6 +2,8 @@
 #define HELPER_HPP
 #define COLORMODE
 
+#include <fstream>
+
 #include <vulkan\vulkan.h>
 //compares two VkExtensionProperties by name. Used to sort extensions
 const bool compare_extensions(VkExtensionProperties &extensionA, VkExtensionProperties &extensionB) {
@@ -9,10 +11,7 @@ const bool compare_extensions(VkExtensionProperties &extensionA, VkExtensionProp
 }
 
 
-//this all goes to hell if not build for windows
-//actually, it goes to hell because we need max and min, but not the windows way.
-//so i guess no colors for console output :)
-
+//this all goes to hell if not build for windows, because linux already supports that stuff
 #ifdef COLORMODE
 #define NOMINMAX
 #include <Windows.h>
@@ -37,7 +36,6 @@ DWORD enable_virtual_terminal() {
 	return 1;
 }
 #endif
-
 
 enum class console_colors_foreground { black = 30, red, green, yellow, blue, purple, cyan, white };
 enum class console_colors_background { black = 40, red, green, yellow, blue, purple, cyan, white };
@@ -70,6 +68,22 @@ template <class T> void err(T value) {
 
 template <class T> void succ(T value) {
 	info(value, console_colors_foreground::green);
+}
+
+std::vector<char> read_file(const std::string &filename) {
+	info("Reading file...");
+	std::ifstream file(filename, std::ios::ate | std::ios::binary);
+	if (!file.is_open()) {
+		throw std::runtime_error("failed to open file");
+	}
+	size_t file_size = (size_t)file.tellg();
+	std::vector<char> buffer(file_size);
+	file.seekg(0);
+	file.read(buffer.data(), file_size);
+
+	file.close();
+	info(std::string("File read, size: ") + std::to_string(sizeof(buffer)));
+	return buffer;
 }
 
 #endif

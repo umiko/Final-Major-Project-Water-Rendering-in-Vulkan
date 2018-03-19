@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\shader">
+      <UniqueIdentifier>{c08d83cd-ef38-4bf1-9e3c-79409291af26}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="application.hpp">
@@ -26,5 +29,22 @@
     <ClCompile Include="application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\vert.spv">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\frag.spv">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\compile.bat">
+      <Filter>Source Files\shader</Filter>
+    </None>
+    <None Include="shaders\shader.frag">
+      <Filter>Source Files\shader</Filter>
+    </None>
+    <None Include="shaders\shader.vert">
+      <Filter>Source Files\shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

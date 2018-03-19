@@ -7,7 +7,6 @@
 #include <vector>
 #include <algorithm>
 #include <string>
-//#include <Windows.h>
 #include <string_view>
 #include <map>
 #include <set>
@@ -60,7 +59,7 @@ private:
 	std::vector<VkImage> m_swapchain_images;
 	VkFormat m_swapchain_image_format;
 	VkExtent2D m_swapchain_extent;
-
+	std::vector<VkImageView> m_swapchain_image_views;
 
 	const std::vector<const char*> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -101,6 +100,10 @@ private:
 
 	void create_swapchain();
 
+	void create_image_views();
+
+	void create_graphics_pipeline();
+
 	//Vulkan helper stuff thats not unvulkan enough to be declared just helper stuff
 	//collects all required extensions in one vector for easy comparison later on
 	std::vector<const char*> get_required_instance_extensions();
@@ -111,7 +114,7 @@ private:
 	VkSurfaceFormatKHR choose_swapchain_surface_format(const std::vector<VkSurfaceFormatKHR> &available_formats);
 	VkPresentModeKHR choose_swapchain_present_mode(const std::vector<VkPresentModeKHR> available_present_modes);
 	VkExtent2D choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &capabilities);
-
+	VkShaderModule create_shader_module(const std::vector<char> &code);
 };
 
 #endif // !APPLICATION_HPP

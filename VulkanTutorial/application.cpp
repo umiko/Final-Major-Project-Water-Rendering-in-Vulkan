@@ -45,12 +45,16 @@ void Application::initialize_window()
 
 void Application::initialize_vulkan()
 {
+	info("Initializing Vulkan...");
 	create_instance();
 	setup_debug_callback();
 	create_surface();
 	pick_physical_device();
 	create_logical_device();
 	create_swapchain();
+	create_image_views();
+	create_graphics_pipeline();
+	succ("Vulkan Initialized");
 }
 
 void Application::main_loop()
@@ -62,6 +66,7 @@ void Application::main_loop()
 
 void Application::create_instance()
 {
+	info("Creating Vulkan instance...");
 	//Check if debug mode is active and check if the validation layers are supported
 	if (enableValidationLayers && !check_validation_layer_support()) {
 		throw std::runtime_error("Requested validation layers not available");
@@ -109,20 +114,6 @@ void Application::create_instance()
 ////	
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::vector<const char*> Application::get_required_instance_extensions()
-{
-	uint32_t glfw_required_extension_count = 0;
-	const char** glfw_extension_names;
-
-	glfw_extension_names = glfwGetRequiredInstanceExtensions(&glfw_required_extension_count);
-
-	std::vector<const char*> final_required_extensions(glfw_extension_names, glfw_extension_names + glfw_required_extension_count);
-
-	if (enableValidationLayers)
-		final_required_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-
-	return final_required_extensions;
-}
 
 
 
@@ -141,6 +132,7 @@ void Application::setup_debug_callback()
 
 bool Application::check_validation_layer_support()
 {
+	info("Checking validation layer support...");
 	uint32_t layer_count;
 	vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
 
@@ -172,6 +164,7 @@ bool Application::check_validation_layer_support()
 
 void Application::pick_physical_device()
 {
+	info("Picking physical device...");
 	uint32_t device_count = 0;
 	vkEnumeratePhysicalDevices(m_instance, &device_count, nullptr);
 	if (device_count == 0)
@@ -202,57 +195,7 @@ void Application::pick_physical_device()
 	}
 }
 
-int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical_device) {
-	VkPhysicalDeviceProperties device_properties;
-	vkGetPhysicalDeviceProperties(physical_device, &device_properties);
 
-	VkPhysicalDeviceFeatures device_features;
-	vkGetPhysicalDeviceFeatures(physical_device, &device_features);
-
-	int score = 0;
-
-	switch (device_properties.deviceType) {
-	case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-		score += 10000;
-		break;
-	case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-		score += 5000;
-		break;
-	case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-		score += 2500;
-		break;
-	default:
-		break;
-	}
-	score += device_properties.limits.maxImageDimension2D;
-
-	if (!device_features.geometryShader) {
-		score = 0;
-		warn(std::string("\t") + device_properties.deviceName + " has no geometry shader and is therefore scoring " + std::to_string(score));
-	}
-	if (!find_queue_families(physical_device).isComplete()) {
-		score = 0;
-		warn(std::string("\t") + device_properties.deviceName + " has failed queue checks and is therefore scoring " + std::to_string(score));
-	}
-	if (!check_device_extension_support(physical_device)) {
-		score = 0;
-		warn(std::string("\t") + device_properties.deviceName + " has failed extension checks and is therefore scoring " + std::to_string(score));
-	}
-	//further tests that require extensions
-	else {
-		bool swapchain_adequate = false;
-		SwapChainSupportDetails swapchain_support = query_swapchain_support(physical_device);
-		swapchain_adequate = !swapchain_support.formats.empty() && !swapchain_support.present_modes.empty();
-		if (!swapchain_adequate) {
-			score = 0;
-			warn(std::string("\t") + device_properties.deviceName + " does not offer sufficient swapchain support and is therefore scoring " + std::to_string(score));
-		}
-	}
-
-	info(std::string("\t") + device_properties.deviceName + std::string(" is scoring ") + std::to_string(score));
-
-	return score;
-}
 
 void Application::create_surface()
 {
@@ -365,6 +308,64 @@ void Application::create_swapchain()
 	m_swapchain_extent = extent;
 }
 
+void Application::create_image_views()
+{
+	info("Creating image views...");
+	m_swapchain_image_views.resize(m_swapchain_images.size());
+	for (size_t i = 0; i < m_swapchain_images.size(); i++) {
+		VkImageViewCreateInfo create_info = {};
+		create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		create_info.image = m_swapchain_images[i];
+		create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		create_info.format = m_swapchain_image_format;
+
+		create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+		create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		create_info.subresourceRange.baseMipLevel = 0;
+		create_info.subresourceRange.levelCount = 1;
+		create_info.subresourceRange.baseArrayLayer = 0;
+		create_info.subresourceRange.layerCount = 1;
+
+		if (vkCreateImageView(m_logical_device, &create_info, nullptr, &m_swapchain_image_views[i]) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create image views");
+		}
+	}
+}
+
+void Application::create_graphics_pipeline()
+{
+	info("Creating graphics pipeline...");
+	std::vector<char> vert_shader_code = read_file("shaders/vert.spv");
+	std::vector<char> frag_shader_code = read_file("shaders/frag.spv");
+
+	VkShaderModule vert_shader_module;
+	VkShaderModule frag_shader_module;
+
+	vert_shader_module = create_shader_module(vert_shader_code);
+	frag_shader_module = create_shader_module(frag_shader_code);
+
+	VkPipelineShaderStageCreateInfo vert_shader_stage_info = {};
+	vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vert_shader_stage_info.module = vert_shader_module;
+	vert_shader_stage_info.pName = "main";
+
+	VkPipelineShaderStageCreateInfo frag_shader_stage_info = {};
+	vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vert_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	vert_shader_stage_info.module = frag_shader_module;
+	vert_shader_stage_info.pName = "main";
+
+	VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_info, frag_shader_stage_info };
+
+	vkDestroyShaderModule(m_logical_device, frag_shader_module, nullptr);
+	vkDestroyShaderModule(m_logical_device, vert_shader_module, nullptr);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Queue Families
@@ -411,6 +412,7 @@ QueueFamilyIndices Application::find_queue_families(VkPhysicalDevice physical_de
 
 SwapChainSupportDetails Application::query_swapchain_support(VkPhysicalDevice device)
 {
+	info("Querying swapchain support...");
 	SwapChainSupportDetails details;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &details.capabilities);
 
@@ -439,9 +441,79 @@ SwapChainSupportDetails Application::query_swapchain_support(VkPhysicalDevice de
 ////	
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+std::vector<const char*> Application::get_required_instance_extensions()
+{
+	info("Getting required instance extensions...");
+	uint32_t glfw_required_extension_count = 0;
+	const char** glfw_extension_names;
+
+	glfw_extension_names = glfwGetRequiredInstanceExtensions(&glfw_required_extension_count);
+
+	std::vector<const char*> final_required_extensions(glfw_extension_names, glfw_extension_names + glfw_required_extension_count);
+
+	if (enableValidationLayers)
+		final_required_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+
+	return final_required_extensions;
+}
+
+
+int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical_device) {
+	info("Evaluating Physical devices...");
+	VkPhysicalDeviceProperties device_properties;
+	vkGetPhysicalDeviceProperties(physical_device, &device_properties);
+
+	VkPhysicalDeviceFeatures device_features;
+	vkGetPhysicalDeviceFeatures(physical_device, &device_features);
+
+	int score = 0;
+
+	switch (device_properties.deviceType) {
+	case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+		score += 10000;
+		break;
+	case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+		score += 5000;
+		break;
+	case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+		score += 2500;
+		break;
+	default:
+		break;
+	}
+	score += device_properties.limits.maxImageDimension2D;
+
+	if (!device_features.geometryShader) {
+		score = 0;
+		warn(std::string("\t") + device_properties.deviceName + " has no geometry shader and is therefore scoring " + std::to_string(score));
+	}
+	if (!find_queue_families(physical_device).isComplete()) {
+		score = 0;
+		warn(std::string("\t") + device_properties.deviceName + " has failed queue checks and is therefore scoring " + std::to_string(score));
+	}
+	if (!check_device_extension_support(physical_device)) {
+		score = 0;
+		warn(std::string("\t") + device_properties.deviceName + " has failed extension checks and is therefore scoring " + std::to_string(score));
+	}
+	//further tests that require extensions
+	else {
+		bool swapchain_adequate = false;
+		SwapChainSupportDetails swapchain_support = query_swapchain_support(physical_device);
+		swapchain_adequate = !swapchain_support.formats.empty() && !swapchain_support.present_modes.empty();
+		if (!swapchain_adequate) {
+			score = 0;
+			warn(std::string("\t") + device_properties.deviceName + " does not offer sufficient swapchain support and is therefore scoring " + std::to_string(score));
+		}
+	}
+
+	info(std::string("\t") + device_properties.deviceName + std::string(" is scoring ") + std::to_string(score));
+
+	return score;
+}
+
 bool Application::check_extension_support(std::vector<const char*> required_extensions, std::vector<VkExtensionProperties> supported_extensions) {
 	//list supported extensions
-	info("Extension Support:");
+	info("Checking Extension Support...");
 	std::set<std::string> required_extensions_set(required_extensions.begin(), required_extensions.end());
 
 	for (const VkExtensionProperties supported_extension : supported_extensions) {
@@ -459,6 +531,8 @@ bool Application::check_extension_support(std::vector<const char*> required_exte
 
 bool Application::check_device_extension_support(VkPhysicalDevice physical_device)
 {
+	info("Checking device extension support...");
+
 	uint32_t extensionCount;
 	vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extensionCount, nullptr);
 
@@ -471,6 +545,7 @@ bool Application::check_device_extension_support(VkPhysicalDevice physical_devic
 
 bool Application::check_instance_extension_support(std::vector<const char*> required_extensions)
 {
+	info("Checking instance extension support...");
 	uint32_t supported_extension_count = 0;
 	vkEnumerateInstanceExtensionProperties(nullptr, &supported_extension_count, nullptr);
 	//enumerate supported extensions
@@ -481,6 +556,7 @@ bool Application::check_instance_extension_support(std::vector<const char*> requ
 
 VkSurfaceFormatKHR Application::choose_swapchain_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats)
 {
+	info("Choosing surface format...");
 	if (available_formats.size() == 1 && available_formats[0].format == VK_FORMAT_UNDEFINED) {
 		return { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 	}
@@ -495,6 +571,7 @@ VkSurfaceFormatKHR Application::choose_swapchain_surface_format(const std::vecto
 
 VkPresentModeKHR Application::choose_swapchain_present_mode(const std::vector<VkPresentModeKHR> available_present_modes)
 {
+	info("Choosing present mode...");
 	VkPresentModeKHR optimal_mode = VK_PRESENT_MODE_FIFO_KHR;
 
 	for (const VkPresentModeKHR available_present_mode : available_present_modes) {
@@ -511,6 +588,7 @@ VkPresentModeKHR Application::choose_swapchain_present_mode(const std::vector<Vk
 
 VkExtent2D Application::choose_swapchain_extent(const VkSurfaceCapabilitiesKHR & capabilities)
 {
+	info("Choosing extent...");
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		return capabilities.currentExtent;
 	}
@@ -520,6 +598,19 @@ VkExtent2D Application::choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &
 		actual_extent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actual_extent.height));
 		return actual_extent;
 	}
+}
+
+VkShaderModule Application::create_shader_module(const std::vector<char>& code)
+{
+	VkShaderModuleCreateInfo create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	create_info.codeSize = code.size();
+	create_info.pCode = reinterpret_cast<const uint32_t*>(code.data());
+	VkShaderModule shader_module;
+	if (vkCreateShaderModule(m_logical_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
+		throw std::runtime_error("ShaderModule creation failed");
+	}
+	return shader_module;
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
@@ -560,6 +651,11 @@ void Application::DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugRepo
 
 void Application::clean_up()
 {
+	info("Cleaning up...");
+	for (VkImageView image_view : m_swapchain_image_views) {
+		vkDestroyImageView(m_logical_device, image_view, nullptr);
+	}
+
 	vkDestroySwapchainKHR(m_logical_device, m_swapchain, nullptr);
 	vkDestroyDevice(m_logical_device, nullptr);
 	DestroyDebugReportCallbackEXT(m_instance, callback, nullptr);
@@ -567,4 +663,5 @@ void Application::clean_up()
 	vkDestroyInstance(m_instance, nullptr);
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
+	succ("Cleanup complete");
 }
