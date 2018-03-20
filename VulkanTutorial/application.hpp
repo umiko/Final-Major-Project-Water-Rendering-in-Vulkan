@@ -60,6 +60,7 @@ private:
 	VkFormat m_swapchain_image_format;
 	VkExtent2D m_swapchain_extent;
 	std::vector<VkImageView> m_swapchain_image_views;
+	VkPipelineLayout m_pipeline_layout;
 
 	const std::vector<const char*> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"

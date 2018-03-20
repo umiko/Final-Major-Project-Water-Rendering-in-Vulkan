@@ -82,7 +82,7 @@ std::vector<char> read_file(const std::string &filename) {
 	file.read(buffer.data(), file_size);
 
 	file.close();
-	info(std::string("File read, size: ") + std::to_string(sizeof(buffer)));
+	info(std::string("File read, size: ") + std::to_string(file_size));
 	return buffer;
 }
 
