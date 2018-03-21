@@ -6,7 +6,6 @@ int main() {
 	enable_virtual_terminal();
 #endif // DEBUG
 
-
 	try {
 		application.run();
 	}
@@ -19,11 +18,10 @@ int main() {
 	return EXIT_SUCCESS;
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Main Functions
-////	
+////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Application::run()
@@ -53,6 +51,7 @@ void Application::initialize_vulkan()
 	create_logical_device();
 	create_swapchain();
 	create_image_views();
+	create_render_pass();
 	create_graphics_pipeline();
 	succ("Vulkan Initialized");
 }
@@ -83,7 +82,7 @@ void Application::create_instance()
 	VkInstanceCreateInfo create_information = {};
 	create_information.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	create_information.pApplicationInfo = &application_info;
-	
+
 	std::vector<const char*> required_instance_extensions = get_required_instance_extensions();
 
 	if (!check_instance_extension_support(required_instance_extensions)) {
@@ -107,15 +106,11 @@ void Application::create_instance()
 	}
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Extensions and Layers
-////	
+////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
 
 void Application::setup_debug_callback()
 {
@@ -159,7 +154,7 @@ bool Application::check_validation_layer_support()
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Physical Devices
-////	
+////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Application::pick_physical_device()
@@ -194,8 +189,6 @@ void Application::pick_physical_device()
 		throw std::runtime_error("Your GPU is not suitable");
 	}
 }
-
-
 
 void Application::create_surface()
 {
@@ -299,13 +292,13 @@ void Application::create_swapchain()
 	if (vkCreateSwapchainKHR(m_logical_device, &create_info, nullptr, &m_swapchain) != VK_SUCCESS) {
 		throw std::runtime_error("Swapchain creation failed");
 	}
-	succ("Swapchain created successfully");
 	vkGetSwapchainImagesKHR(m_logical_device, m_swapchain, &image_count, nullptr);
 	m_swapchain_images.resize(image_count);
 	vkGetSwapchainImagesKHR(m_logical_device, m_swapchain, &image_count, m_swapchain_images.data());
 
 	m_swapchain_image_format = surface_format.format;
 	m_swapchain_extent = extent;
+	succ("Swapchain created successfully");
 }
 
 void Application::create_image_views()
@@ -334,6 +327,45 @@ void Application::create_image_views()
 			throw std::runtime_error("Failed to create image views");
 		}
 	}
+	succ("Image Views created");
+}
+
+void Application::create_render_pass()
+{
+	info("Creating Render Pass...");
+	VkAttachmentDescription color_attachment_description = {};
+	color_attachment_description.format = m_swapchain_image_format;
+	//change in case of multisampling
+	color_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+	color_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	color_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	color_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	color_attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference color_attachment_reference = {};
+	//index of color attachment description
+	color_attachment_reference.attachment = 0;
+	color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpass_description = {};
+	subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass_description.colorAttachmentCount = 1;
+	subpass_description.pColorAttachments = &color_attachment_reference;
+
+	VkRenderPassCreateInfo render_pass_create_info = {};
+	render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	render_pass_create_info.attachmentCount = 1;
+	render_pass_create_info.pAttachments = &color_attachment_description;
+	render_pass_create_info.subpassCount = 1;
+	render_pass_create_info.pSubpasses = &subpass_description;
+
+	if (vkCreateRenderPass(m_logical_device, &render_pass_create_info, nullptr, &m_render_pass) != VK_SUCCESS) {
+		throw std::runtime_error("Render Pass creation failed");
+	}
+
+	succ("Render Pass Created");
 }
 
 void Application::create_graphics_pipeline()
@@ -355,10 +387,10 @@ void Application::create_graphics_pipeline()
 	vert_shader_stage_info.pName = "main";
 
 	VkPipelineShaderStageCreateInfo frag_shader_stage_info = {};
-	vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	vert_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	vert_shader_stage_info.module = frag_shader_module;
-	vert_shader_stage_info.pName = "main";
+	frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	frag_shader_stage_info.module = frag_shader_module;
+	frag_shader_stage_info.pName = "main";
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_info, frag_shader_stage_info };
 
@@ -369,10 +401,10 @@ void Application::create_graphics_pipeline()
 	vertex_input_create_info.vertexAttributeDescriptionCount = 0;
 	vertex_input_create_info.pVertexAttributeDescriptions = nullptr;
 
-	VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info = {};
-	input_assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	input_assembly_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	input_assembly_create_info.primitiveRestartEnable = VK_FALSE;
+	VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {};
+	input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	input_assembly_state_create_info.primitiveRestartEnable = VK_FALSE;
 
 	VkViewport viewport = {};
 	viewport.x = 0.0f;
@@ -428,16 +460,16 @@ void Application::create_graphics_pipeline()
 	color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 	color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
 
-	VkPipelineColorBlendStateCreateInfo color_blending_create_info;
-	color_blending_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	color_blending_create_info.logicOpEnable = VK_FALSE;
-	color_blending_create_info.logicOp = VK_LOGIC_OP_COPY;
-	color_blending_create_info.attachmentCount = 1;
-	color_blending_create_info.pAttachments = &color_blend_attachment_state;
-	color_blending_create_info.blendConstants[0] = 0.0f;
-	color_blending_create_info.blendConstants[1] = 0.0f;
-	color_blending_create_info.blendConstants[2] = 0.0f;
-	color_blending_create_info.blendConstants[3] = 0.0f;
+	VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {};
+	color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	color_blend_state_create_info.logicOpEnable = VK_FALSE;
+	color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
+	color_blend_state_create_info.attachmentCount = 1;
+	color_blend_state_create_info.pAttachments = &color_blend_attachment_state;
+	color_blend_state_create_info.blendConstants[0] = 0.0f;
+	color_blend_state_create_info.blendConstants[1] = 0.0f;
+	color_blend_state_create_info.blendConstants[2] = 0.0f;
+	color_blend_state_create_info.blendConstants[3] = 0.0f;
 
 	VkDynamicState dynamic_states[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
@@ -460,6 +492,33 @@ void Application::create_graphics_pipeline()
 		throw std::runtime_error("Pipeline layout creation failed");
 	}
 
+	VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {};
+	graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	graphics_pipeline_create_info.stageCount = 2;
+	graphics_pipeline_create_info.pStages = shader_stages;
+
+	graphics_pipeline_create_info.pVertexInputState = &vertex_input_create_info;
+	graphics_pipeline_create_info.pInputAssemblyState = &input_assembly_state_create_info;
+	graphics_pipeline_create_info.pViewportState = &viewport_state_create_info;
+	graphics_pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
+	graphics_pipeline_create_info.pMultisampleState = &multisample_state_create_info;
+	graphics_pipeline_create_info.pDepthStencilState = nullptr;
+	graphics_pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
+	graphics_pipeline_create_info.pDynamicState = &dynamic_state_create_info;
+
+	graphics_pipeline_create_info.layout = m_pipeline_layout;
+
+	graphics_pipeline_create_info.renderPass = m_render_pass;
+	//index of the sub pass where this graphics pipeline will be used
+	graphics_pipeline_create_info.subpass = 0;
+
+	graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+	graphics_pipeline_create_info.basePipelineIndex = -1;
+
+	if (vkCreateGraphicsPipelines(m_logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &m_graphics_pipeline) != VK_SUCCESS) {
+		throw std::runtime_error("Graphics Pipeline creation failed");
+	}
+
 	vkDestroyShaderModule(m_logical_device, frag_shader_module, nullptr);
 	vkDestroyShaderModule(m_logical_device, vert_shader_module, nullptr);
 
@@ -469,7 +528,7 @@ void Application::create_graphics_pipeline()
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Queue Families
-////	
+////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 QueueFamilyIndices Application::find_queue_families(VkPhysicalDevice physical_device)
@@ -493,7 +552,6 @@ QueueFamilyIndices Application::find_queue_families(VkPhysicalDevice physical_de
 		//Can it present???
 		VkBool32 presentation_support = VK_FALSE;
 		vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, queue_index, m_surface, &presentation_support);
-
 
 		if (queue_family.queueCount > 0 && presentation_support != VK_FALSE) {
 			indices.presentation_family = queue_index;
@@ -533,12 +591,10 @@ SwapChainSupportDetails Application::query_swapchain_support(VkPhysicalDevice de
 	return details;
 }
 
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Vulkan Helper Stuff
-////	
+////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::vector<const char*> Application::get_required_instance_extensions()
@@ -556,7 +612,6 @@ std::vector<const char*> Application::get_required_instance_extensions()
 
 	return final_required_extensions;
 }
-
 
 int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical_device) {
 	info("Evaluating Physical devices...");
@@ -621,7 +676,7 @@ bool Application::check_extension_support(std::vector<const char*> required_exte
 		required_extensions_set.erase(supported_extension.extensionName) ? succ(extension_output) : info(extension_output);;
 #ifndef _DEBUG
 		//if its not debugging, stop searching once its empty
-		if(required_extensions_set.empty())
+		if (required_extensions_set.empty())
 			break;
 #endif
 	}
@@ -640,8 +695,6 @@ bool Application::check_device_extension_support(VkPhysicalDevice physical_devic
 	vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extensionCount, supported_extensions.data());
 	return check_extension_support(device_extensions, supported_extensions);
 }
-
-
 
 bool Application::check_instance_extension_support(std::vector<const char*> required_extensions)
 {
@@ -723,7 +776,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Proxy Functions
-////	
+////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 VkResult Application::CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT * pCreateInfo, const VkAllocationCallbacks * pAllocator, VkDebugReportCallbackEXT * pCallback) {
@@ -746,14 +799,15 @@ void Application::DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugRepo
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Cleanup
-////	
+////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Application::clean_up()
 {
 	info("Cleaning up...");
+	vkDestroyPipeline(m_logical_device, m_graphics_pipeline, nullptr);
 	vkDestroyPipelineLayout(m_logical_device, m_pipeline_layout, nullptr);
-
+	vkDestroyRenderPass(m_logical_device, m_render_pass, nullptr);
 	for (VkImageView image_view : m_swapchain_image_views) {
 		vkDestroyImageView(m_logical_device, image_view, nullptr);
 	}

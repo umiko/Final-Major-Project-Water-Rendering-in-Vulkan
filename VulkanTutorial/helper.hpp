@@ -10,7 +10,6 @@ const bool compare_extensions(VkExtensionProperties &extensionA, VkExtensionProp
 	return extensionA.extensionName > extensionB.extensionName;
 }
 
-
 //this all goes to hell if not build for windows, because linux already supports that stuff
 #ifdef COLORMODE
 #define NOMINMAX
@@ -44,10 +43,10 @@ const char  esc_color_end_char = 'm';
 const char	esc_color_reset_char = '0';
 
 template <class T> void info(T value, console_colors_foreground foreground_color_code = console_colors_foreground::white, console_colors_background background_color_code = console_colors_background::black) {
-	#ifdef _DEBUG
+#ifdef _DEBUG
 #ifdef COLORMODE
 	//first, set the wanted colours
-	std::cout << esc_char << (int)foreground_color_code << ';' << (int)background_color_code << esc_color_end_char; 
+	std::cout << esc_char << (int)foreground_color_code << ';' << (int)background_color_code << esc_color_end_char;
 #endif
 	//then display the message
 	std::cout << value << std::endl;
@@ -55,7 +54,7 @@ template <class T> void info(T value, console_colors_foreground foreground_color
 	//reset the colors
 	std::cout << esc_char << esc_color_reset_char << esc_color_end_char;
 #endif
-	#endif // !_DEBUG
+#endif // !_DEBUG
 }
 
 template <class T> void warn(T value) {

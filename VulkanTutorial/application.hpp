@@ -23,7 +23,7 @@ struct QueueFamilyIndices {
 	int presentation_family = -1;
 
 	bool isComplete() {
-		return graphics_family >= 0 && presentation_family >=0;
+		return graphics_family >= 0 && presentation_family >= 0;
 	}
 };
 
@@ -32,7 +32,6 @@ struct SwapChainSupportDetails {
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> present_modes;
 };
-
 
 class Application {
 public:
@@ -60,7 +59,9 @@ private:
 	VkFormat m_swapchain_image_format;
 	VkExtent2D m_swapchain_extent;
 	std::vector<VkImageView> m_swapchain_image_views;
+	VkRenderPass m_render_pass;
 	VkPipelineLayout m_pipeline_layout;
+	VkPipeline m_graphics_pipeline;
 
 	const std::vector<const char*> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -80,28 +81,30 @@ private:
 	void clean_up();
 
 	void create_instance();
-			//checks if the validation layers are supported
-			bool check_validation_layer_support();
+	//checks if the validation layers are supported
+	bool check_validation_layer_support();
 
 	void setup_debug_callback();
-		static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
-		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
-		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
-		
+	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
+	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
+	void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
+
 	void create_surface();
 
 	void pick_physical_device();
-		//scores the physical devices of the system
-		int evaluate_physical_device_capabilities(VkPhysicalDevice device);
+	//scores the physical devices of the system
+	int evaluate_physical_device_capabilities(VkPhysicalDevice device);
 
 	void create_logical_device();
-		QueueFamilyIndices find_queue_families(VkPhysicalDevice physical_device);
+	QueueFamilyIndices find_queue_families(VkPhysicalDevice physical_device);
 
-		SwapChainSupportDetails query_swapchain_support(VkPhysicalDevice device);
+	SwapChainSupportDetails query_swapchain_support(VkPhysicalDevice device);
 
 	void create_swapchain();
 
 	void create_image_views();
+
+	void create_render_pass();
 
 	void create_graphics_pipeline();
 
