@@ -53,6 +53,8 @@ void Application::initialize_vulkan()
 	create_image_views();
 	create_render_pass();
 	create_graphics_pipeline();
+	create_framebuffers();
+	create_command_pool();
 	succ("Vulkan Initialized");
 }
 
@@ -525,6 +527,48 @@ void Application::create_graphics_pipeline()
 	succ("Created graphics pipeline");
 }
 
+void Application::create_framebuffers()
+{
+	info("Creating framebuffers...");
+	m_swapchain_framebuffers.resize(m_swapchain_image_views.size());
+
+	for (size_t i = 0; i < m_swapchain_image_views.size(); i++) {
+		VkImageView attachments[] = {
+			m_swapchain_image_views[i]
+		};
+
+		VkFramebufferCreateInfo framebuffer_create_info = {};
+		framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebuffer_create_info.renderPass = m_render_pass;
+		framebuffer_create_info.attachmentCount = 1;
+		framebuffer_create_info.pAttachments = attachments;
+		framebuffer_create_info.width = m_swapchain_extent.width;
+		framebuffer_create_info.height = m_swapchain_extent.height;
+		framebuffer_create_info.layers = 1;
+
+		if (vkCreateFramebuffer(m_logical_device, &framebuffer_create_info, nullptr, &m_swapchain_framebuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("Framebuffer creation failed");
+		}
+	}
+	succ("Framebuffers created");
+}
+
+void Application::create_command_pool()
+{
+	info("Creating Command Pool");
+	QueueFamilyIndices queue_family_indices = find_queue_families(m_physical_device);
+
+	VkCommandPoolCreateInfo command_pool_create_info = {};
+	command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	command_pool_create_info.queueFamilyIndex = queue_family_indices.graphics_family;
+	command_pool_create_info.flags = 0;
+
+	if (vkCreateCommandPool(m_logical_device, &command_pool_create_info, nullptr, &m_command_pool) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create command pool");
+	}
+	succ("Command Pool created");
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Queue Families
@@ -587,7 +631,7 @@ SwapChainSupportDetails Application::query_swapchain_support(VkPhysicalDevice de
 		details.present_modes.resize(present_mode_count);
 		vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &present_mode_count, details.present_modes.data());
 	}
-
+	succ("Swapchain details retrieved");
 	return details;
 }
 
@@ -805,6 +849,12 @@ void Application::DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugRepo
 void Application::clean_up()
 {
 	info("Cleaning up...");
+
+	vkDestroyCommandPool(m_logical_device, m_command_pool, nullptr);
+	for (auto framebuffer : m_swapchain_framebuffers) {
+		vkDestroyFramebuffer(m_logical_device, framebuffer, nullptr);
+	}
+
 	vkDestroyPipeline(m_logical_device, m_graphics_pipeline, nullptr);
 	vkDestroyPipelineLayout(m_logical_device, m_pipeline_layout, nullptr);
 	vkDestroyRenderPass(m_logical_device, m_render_pass, nullptr);

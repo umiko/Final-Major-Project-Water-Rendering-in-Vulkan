@@ -62,6 +62,9 @@ private:
 	VkRenderPass m_render_pass;
 	VkPipelineLayout m_pipeline_layout;
 	VkPipeline m_graphics_pipeline;
+	VkCommandPool m_command_pool;
+
+	std::vector<VkFramebuffer> m_swapchain_framebuffers;
 
 	const std::vector<const char*> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -107,6 +110,10 @@ private:
 	void create_render_pass();
 
 	void create_graphics_pipeline();
+
+	void create_framebuffers();
+
+	void create_command_pool();
 
 	//Vulkan helper stuff thats not unvulkan enough to be declared just helper stuff
 	//collects all required extensions in one vector for easy comparison later on
