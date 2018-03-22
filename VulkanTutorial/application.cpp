@@ -55,6 +55,7 @@ void Application::initialize_vulkan()
 	create_graphics_pipeline();
 	create_framebuffers();
 	create_command_pool();
+	create_command_buffers();
 	succ("Vulkan Initialized");
 }
 
@@ -62,6 +63,7 @@ void Application::main_loop()
 {
 	while (!glfwWindowShouldClose(m_window)) {
 		glfwPollEvents();
+		draw_frame();
 	}
 }
 
@@ -569,6 +571,73 @@ void Application::create_command_pool()
 	succ("Command Pool created");
 }
 
+void Application::create_command_buffers()
+{
+	info("Creating Command Buffers...");
+	m_command_buffers.resize(m_swapchain_framebuffers.size());
+
+	VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	command_buffer_allocate_info.commandPool = m_command_pool;
+	command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	command_buffer_allocate_info.commandBufferCount = (uint32_t)m_command_buffers.size();
+
+	if (vkAllocateCommandBuffers(m_logical_device, &command_buffer_allocate_info, m_command_buffers.data()) != VK_SUCCESS) {
+		throw std::runtime_error("Commandbuffer allocation failed");
+	}
+	succ("Command buffer allocated");
+	info("Recording Command Buffers...");
+	for (size_t i = 0; i < m_command_buffers.size(); i++) {
+		VkCommandBufferBeginInfo command_buffer_begin_info = {};
+		command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+		command_buffer_begin_info.pInheritanceInfo = nullptr;
+
+		vkBeginCommandBuffer(m_command_buffers[i], &command_buffer_begin_info);
+
+		VkRenderPassBeginInfo render_pass_begin_info = {};
+		render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		render_pass_begin_info.renderPass = m_render_pass;
+		render_pass_begin_info.framebuffer = m_swapchain_framebuffers[i];
+		render_pass_begin_info.renderArea.offset = { 0,0 };
+		render_pass_begin_info.renderArea.extent = m_swapchain_extent;
+
+		VkClearValue clear_value = { 0.0f,0.0f,0.0f,1.0f };
+		render_pass_begin_info.clearValueCount = 1;
+		render_pass_begin_info.pClearValues = &clear_value;
+
+		vkCmdBeginRenderPass(m_command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(m_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
+		
+		vkCmdDraw(m_command_buffers[i], 3, 1, 0, 0);
+
+		vkCmdEndRenderPass(m_command_buffers[i]);
+
+		if (vkEndCommandBuffer(m_command_buffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("Command Buffer Recording failed.");
+		}
+	}
+	succ("Command Buffers recorded.");
+}
+
+void Application::create_semaphores()
+{
+	info("Creating semaphores...");
+	VkSemaphoreCreateInfo semaphore_create_info = {};
+	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	if (vkCreateSemaphore(m_logical_device, &semaphore_create_info, nullptr, &m_image_available_semaphore) != VK_SUCCESS || vkCreateSemaphore(m_logical_device, &semaphore_create_info, nullptr, &m_render_finished_semaphore) != VK_SUCCESS) {
+		throw std::runtime_error("Semaphore creation failed");
+	}
+	succ("Semaphores created");
+}
+
+void Application::draw_frame()
+{
+	uint32_t image_index;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Queue Families
@@ -849,6 +918,8 @@ void Application::DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugRepo
 void Application::clean_up()
 {
 	info("Cleaning up...");
+	vkDestroySemaphore(m_logical_device, m_render_finished_semaphore, nullptr);
+	vkDestroySemaphore(m_logical_device, m_image_available_semaphore, nullptr);
 
 	vkDestroyCommandPool(m_logical_device, m_command_pool, nullptr);
 	for (auto framebuffer : m_swapchain_framebuffers) {
