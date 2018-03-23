@@ -56,6 +56,7 @@ void Application::initialize_vulkan()
 	create_framebuffers();
 	create_command_pool();
 	create_command_buffers();
+	create_semaphores();
 	succ("Vulkan Initialized");
 }
 
@@ -63,8 +64,10 @@ void Application::main_loop()
 {
 	while (!glfwWindowShouldClose(m_window)) {
 		glfwPollEvents();
+		//TODO: update goes here
 		draw_frame();
 	}
+	vkDeviceWaitIdle(m_logical_device);
 }
 
 void Application::create_instance()
@@ -358,12 +361,22 @@ void Application::create_render_pass()
 	subpass_description.colorAttachmentCount = 1;
 	subpass_description.pColorAttachments = &color_attachment_reference;
 
+	VkSubpassDependency subpass_dependency = {};
+	subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	subpass_dependency.dstSubpass = 0;
+	subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	subpass_dependency.srcAccessMask = 0;
+	subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 	VkRenderPassCreateInfo render_pass_create_info = {};
 	render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	render_pass_create_info.attachmentCount = 1;
 	render_pass_create_info.pAttachments = &color_attachment_description;
 	render_pass_create_info.subpassCount = 1;
 	render_pass_create_info.pSubpasses = &subpass_description;
+	render_pass_create_info.dependencyCount = 1;
+	render_pass_create_info.pDependencies = &subpass_dependency;
 
 	if (vkCreateRenderPass(m_logical_device, &render_pass_create_info, nullptr, &m_render_pass) != VK_SUCCESS) {
 		throw std::runtime_error("Render Pass creation failed");
@@ -508,7 +521,7 @@ void Application::create_graphics_pipeline()
 	graphics_pipeline_create_info.pMultisampleState = &multisample_state_create_info;
 	graphics_pipeline_create_info.pDepthStencilState = nullptr;
 	graphics_pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
-	graphics_pipeline_create_info.pDynamicState = &dynamic_state_create_info;
+	graphics_pipeline_create_info.pDynamicState = nullptr;
 
 	graphics_pipeline_create_info.layout = m_pipeline_layout;
 
@@ -636,6 +649,40 @@ void Application::create_semaphores()
 void Application::draw_frame()
 {
 	uint32_t image_index;
+	vkAcquireNextImageKHR(m_logical_device, m_swapchain, std::numeric_limits<uint64_t>::max(), m_image_available_semaphore, VK_NULL_HANDLE, &image_index);
+
+	VkSubmitInfo submit_info = {};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore wait_semaphores[] = { m_image_available_semaphore };
+	VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	submit_info.waitSemaphoreCount = 1;
+	submit_info.pWaitSemaphores = wait_semaphores;
+	submit_info.pWaitDstStageMask = wait_stages;
+
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &m_command_buffers[image_index];
+
+	VkSemaphore signal_semaphores[] = { m_render_finished_semaphore };
+	submit_info.signalSemaphoreCount = 1;
+	submit_info.pSignalSemaphores = signal_semaphores;
+	if (vkQueueSubmit(m_graphics_queue, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS) {
+		throw std::runtime_error("Draw Command submission failed");
+	}
+
+	VkPresentInfoKHR present_info = {};
+	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores = signal_semaphores;
+
+	VkSwapchainKHR swapchains[] = { m_swapchain };
+	present_info.swapchainCount = 1;
+	present_info.pSwapchains = swapchains;
+	present_info.pImageIndices = &image_index;
+	present_info.pResults = nullptr;
+
+	vkQueuePresentKHR(m_presentation_queue, &present_info);
+	vkQueueWaitIdle(m_presentation_queue);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
