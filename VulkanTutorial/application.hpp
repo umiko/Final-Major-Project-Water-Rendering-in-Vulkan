@@ -86,7 +86,7 @@ private:
 	void initialize_vulkan();
 	void main_loop();
 	void clean_up();
-	
+
 	//Initialization stuff
 
 	void create_instance();
@@ -105,8 +105,14 @@ private:
 
 	void draw_frame();
 
+	void recreate_swapchain();
+
+	void clean_up_swapchain();
+
 	//Vulkan helper stuff thats not unvulkan enough to be declared just helper stuff
-	//collects all required extensions in one vector for easy comparison later on
+	static void on_window_resized(GLFWwindow* window, int width, int height);
+
+	//collects all required instance extensions in one vector for easy comparison later on
 	std::vector<const char*> get_required_instance_extensions();
 
 	//checks if the validation layers are supported

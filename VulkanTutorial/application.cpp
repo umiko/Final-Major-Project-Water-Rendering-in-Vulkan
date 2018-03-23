@@ -37,8 +37,11 @@ void Application::initialize_window()
 	glfwInit();
 	//dont use openGL
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	m_window = glfwCreateWindow(WIDTH, HEIGHT, WINDOW_TITLE, nullptr, nullptr);
+
+	glfwSetWindowUserPointer(m_window, this);
+	glfwSetWindowSizeCallback(m_window, Application::on_window_resized);
 }
 
 void Application::initialize_vulkan()
@@ -622,7 +625,7 @@ void Application::create_command_buffers()
 		vkCmdBeginRenderPass(m_command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
 		vkCmdBindPipeline(m_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
-		
+
 		vkCmdDraw(m_command_buffers[i], 3, 1, 0, 0);
 
 		vkCmdEndRenderPass(m_command_buffers[i]);
@@ -684,6 +687,27 @@ void Application::draw_frame()
 	vkQueuePresentKHR(m_presentation_queue, &present_info);
 	vkQueueWaitIdle(m_presentation_queue);
 }
+
+void Application::recreate_swapchain()
+{
+
+	int width, height;
+	glfwGetWindowSize(m_window, &width, &height);
+	if (width == 0 || height == 0) return;
+
+	vkDeviceWaitIdle(m_logical_device);
+
+	clean_up_swapchain();
+
+	create_swapchain();
+	create_image_views();
+	create_render_pass();
+	create_graphics_pipeline();
+	create_framebuffers();
+	create_command_buffers();
+}
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
@@ -906,7 +930,9 @@ VkExtent2D Application::choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &
 		return capabilities.currentExtent;
 	}
 	else {
-		VkExtent2D actual_extent = { WIDTH, HEIGHT };
+		int width, height;
+		glfwGetWindowSize(m_window, &width, &height);
+		VkExtent2D actual_extent = { width, height };
 		actual_extent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actual_extent.width));
 		actual_extent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actual_extent.height));
 		return actual_extent;
@@ -933,6 +959,14 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT
 	return VK_FALSE;
 }
 
+
+void Application::on_window_resized(GLFWwindow* window, int width, int height)
+{
+	Application *app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
+	app->recreate_swapchain();
+
+	
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Proxy Functions
@@ -962,16 +996,13 @@ void Application::DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugRepo
 ////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Application::clean_up()
+void Application::clean_up_swapchain()
 {
-	info("Cleaning up...");
-	vkDestroySemaphore(m_logical_device, m_render_finished_semaphore, nullptr);
-	vkDestroySemaphore(m_logical_device, m_image_available_semaphore, nullptr);
-
-	vkDestroyCommandPool(m_logical_device, m_command_pool, nullptr);
+	info("Cleaning up swapchain...");
 	for (auto framebuffer : m_swapchain_framebuffers) {
 		vkDestroyFramebuffer(m_logical_device, framebuffer, nullptr);
 	}
+	vkFreeCommandBuffers(m_logical_device, m_command_pool, static_cast<uint32_t>(m_command_buffers.size()), m_command_buffers.data());
 
 	vkDestroyPipeline(m_logical_device, m_graphics_pipeline, nullptr);
 	vkDestroyPipelineLayout(m_logical_device, m_pipeline_layout, nullptr);
@@ -979,12 +1010,28 @@ void Application::clean_up()
 	for (VkImageView image_view : m_swapchain_image_views) {
 		vkDestroyImageView(m_logical_device, image_view, nullptr);
 	}
-
 	vkDestroySwapchainKHR(m_logical_device, m_swapchain, nullptr);
+	succ("Swapchain cleaned successfully");
+}
+
+
+
+void Application::clean_up()
+{
+	info("Cleaning up...");
+	clean_up_swapchain();
+	vkDestroySemaphore(m_logical_device, m_render_finished_semaphore, nullptr);
+	vkDestroySemaphore(m_logical_device, m_image_available_semaphore, nullptr);
+
+	vkDestroyCommandPool(m_logical_device, m_command_pool, nullptr);
+	
+
 	vkDestroyDevice(m_logical_device, nullptr);
 	DestroyDebugReportCallbackEXT(m_instance, callback, nullptr);
 	vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
+
+
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
 	succ("Cleanup complete");
