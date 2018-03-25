@@ -73,6 +73,8 @@ void Application::main_loop()
 	vkDeviceWaitIdle(m_logical_device);
 }
 
+#pragma region Initialization
+
 void Application::create_instance()
 {
 	info("Creating Vulkan instance...");
@@ -225,8 +227,10 @@ void Application::create_logical_device()
 		queue_create_info.pQueuePriorities = &queue_priority;
 		queue_create_informations.push_back(queue_create_info);
 	}
-
+	//Set device features that need to be enabled
 	VkPhysicalDeviceFeatures device_features = {};
+	//TODO: Wireframe happens here
+	device_features.fillModeNonSolid = VK_TRUE;
 
 	VkDeviceCreateInfo logical_device_create_info = {};
 	logical_device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -450,7 +454,7 @@ void Application::create_graphics_pipeline()
 	rasterization_state_create_info.depthClampEnable = VK_FALSE;
 	rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
 	//TODO: this is where you wireframe, REQUIRES A GPU FEATURE
-	rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_LINE;
 	rasterization_state_create_info.lineWidth = 1.0f;
 	rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
 	rasterization_state_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
@@ -649,15 +653,26 @@ void Application::create_semaphores()
 	succ("Semaphores created");
 }
 
+#pragma endregion
+
 void Application::draw_frame()
 {
 	uint32_t image_index;
-	vkAcquireNextImageKHR(m_logical_device, m_swapchain, std::numeric_limits<uint64_t>::max(), m_image_available_semaphore, VK_NULL_HANDLE, &image_index);
+	VkResult drawing_result = vkAcquireNextImageKHR(m_logical_device, m_swapchain, std::numeric_limits<uint64_t>::max(), m_image_available_semaphore, VK_NULL_HANDLE, &image_index);
+
+	if (drawing_result == VK_ERROR_OUT_OF_DATE_KHR) {
+		recreate_swapchain();
+		return;
+	}
+	else if (drawing_result != VK_SUCCESS && drawing_result == VK_SUBOPTIMAL_KHR) {
+		throw std::runtime_error("Failed acquiring swapchain image");
+	}
 
 	VkSubmitInfo submit_info = {};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 	VkSemaphore wait_semaphores[] = { m_image_available_semaphore };
+
 	VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submit_info.waitSemaphoreCount = 1;
 	submit_info.pWaitSemaphores = wait_semaphores;
@@ -684,7 +699,14 @@ void Application::draw_frame()
 	present_info.pImageIndices = &image_index;
 	present_info.pResults = nullptr;
 
-	vkQueuePresentKHR(m_presentation_queue, &present_info);
+	drawing_result = vkQueuePresentKHR(m_presentation_queue, &present_info);
+	if (drawing_result == VK_ERROR_OUT_OF_DATE_KHR || drawing_result == VK_SUBOPTIMAL_KHR) {
+		recreate_swapchain();
+	}
+	else if (drawing_result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to present swapchain image");
+	}
+
 	vkQueueWaitIdle(m_presentation_queue);
 }
 
@@ -821,6 +843,10 @@ int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical
 		break;
 	}
 	score += device_properties.limits.maxImageDimension2D;
+	if (device_features.fillModeNonSolid) {
+		warn("Wireframe not supported, switching to wireframe will not be available.");
+		//TODO: dont allow wireframe switching
+	}
 
 	if (!device_features.geometryShader) {
 		score = 0;
@@ -891,6 +917,41 @@ bool Application::check_instance_extension_support(std::vector<const char*> requ
 	return check_extension_support(required_extensions, supported_extensions);
 }
 
+
+
+VkShaderModule Application::create_shader_module(const std::vector<char>& code)
+{
+	VkShaderModuleCreateInfo create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	create_info.codeSize = code.size();
+	create_info.pCode = reinterpret_cast<const uint32_t*>(code.data());
+	VkShaderModule shader_module;
+	if (vkCreateShaderModule(m_logical_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
+		throw std::runtime_error("ShaderModule creation failed");
+	}
+	return shader_module;
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
+{
+	info(std::string("VALIDATION LAYERS:\n") + msg, console_colors_foreground::white, console_colors_background::red);
+
+	return VK_FALSE;
+}
+
+void Application::on_window_resized(GLFWwindow* window, int width, int height)
+{
+	Application *app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
+	app->recreate_swapchain();	
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////							Selection Functions
+////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#pragma region Selection Functions
 VkSurfaceFormatKHR Application::choose_swapchain_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats)
 {
 	info("Choosing surface format...");
@@ -938,40 +999,17 @@ VkExtent2D Application::choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &
 		return actual_extent;
 	}
 }
-
-VkShaderModule Application::create_shader_module(const std::vector<char>& code)
-{
-	VkShaderModuleCreateInfo create_info = {};
-	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	create_info.codeSize = code.size();
-	create_info.pCode = reinterpret_cast<const uint32_t*>(code.data());
-	VkShaderModule shader_module;
-	if (vkCreateShaderModule(m_logical_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
-		throw std::runtime_error("ShaderModule creation failed");
-	}
-	return shader_module;
-}
-
-VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
-{
-	info(std::string("VALIDATION LAYERS:\n") + msg, console_colors_foreground::white, console_colors_background::red);
-
-	return VK_FALSE;
-}
+#pragma endregion
 
 
-void Application::on_window_resized(GLFWwindow* window, int width, int height)
-{
-	Application *app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-	app->recreate_swapchain();
-
-	
-}
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Proxy Functions
 ////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#pragma region Vulkan Proxy Function
+
 
 VkResult Application::CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT * pCreateInfo, const VkAllocationCallbacks * pAllocator, VkDebugReportCallbackEXT * pCallback) {
 	auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
@@ -990,11 +1028,16 @@ void Application::DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugRepo
 	}
 }
 
+#pragma endregion
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Cleanup
 ////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#pragma region Clean Up
+
 
 void Application::clean_up_swapchain()
 {
@@ -1036,3 +1079,6 @@ void Application::clean_up()
 	glfwTerminate();
 	succ("Cleanup complete");
 }
+
+
+#pragma endregion
