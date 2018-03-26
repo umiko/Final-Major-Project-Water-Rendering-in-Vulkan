@@ -418,12 +418,16 @@ void Application::create_graphics_pipeline()
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_info, frag_shader_stage_info };
 
+	auto vertex_binding_descriptions = Vertex::get_binding_description();
+	auto vertex_attribute_descriptions = Vertex::get_attribute_descriptions();
+
 	VkPipelineVertexInputStateCreateInfo vertex_input_create_info = {};
 	vertex_input_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertex_input_create_info.vertexBindingDescriptionCount = 0;
-	vertex_input_create_info.pVertexBindingDescriptions = nullptr;
-	vertex_input_create_info.vertexAttributeDescriptionCount = 0;
-	vertex_input_create_info.pVertexAttributeDescriptions = nullptr;
+	vertex_input_create_info.vertexBindingDescriptionCount = 1;	
+	vertex_input_create_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attribute_descriptions.size());
+
+	vertex_input_create_info.pVertexBindingDescriptions = &vertex_binding_descriptions;
+	vertex_input_create_info.pVertexAttributeDescriptions = vertex_attribute_descriptions.data();
 
 	VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {};
 	input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

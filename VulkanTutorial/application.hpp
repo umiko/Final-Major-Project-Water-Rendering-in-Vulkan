@@ -11,6 +11,9 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <array>
+
+#include <glm\glm.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -31,6 +34,35 @@ struct SwapChainSupportDetails {
 	VkSurfaceCapabilitiesKHR capabilities;
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> present_modes;
+};
+
+struct Vertex {
+	glm::vec2 position;
+	glm::vec3 color;
+
+	static VkVertexInputBindingDescription get_binding_description() {
+		VkVertexInputBindingDescription vertex_input_binding_description = {};
+		vertex_input_binding_description.binding = 0;
+		vertex_input_binding_description.stride = sizeof(Vertex);
+		vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return vertex_input_binding_description;
+	}
+
+	static std::array<VkVertexInputAttributeDescription, 2> get_attribute_descriptions() {
+		std::array<VkVertexInputAttributeDescription, 2> vertex_input_attribute_descriptions = {};
+		vertex_input_attribute_descriptions[0].binding = 0;
+		vertex_input_attribute_descriptions[0].location = 0;
+		vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+		vertex_input_attribute_descriptions[0].offset = offsetof(Vertex, position);
+
+		vertex_input_attribute_descriptions[1].binding = 0;
+		vertex_input_attribute_descriptions[1].location = 1;
+		vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		vertex_input_attribute_descriptions[1].offset = offsetof(Vertex, color);
+
+		return vertex_input_attribute_descriptions;
+	}
 };
 
 class Application {
@@ -75,6 +107,12 @@ private:
 	};
 
 	const std::vector<const char*> device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+	const std::vector<Vertex> vertices = {
+		{ { 0.0f, -0.5f },{ 1.0f, 0.0f, 0.0f } },
+		{ { 0.5f, 0.5f },{ 0.0f, 1.0f, 0.0f } },
+		{ { -0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f } }
+	};
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
