@@ -806,6 +806,11 @@ QueueFamilyIndices Application::find_queue_families(VkPhysicalDevice physical_de
 			info(std::string("\tQueue ") + std::to_string(queue_index) + " is able to present");
 		}
 
+		if (queue_family.queueCount > 0 && queue_family.queueFlags & VK_QUEUE_TRANSFER_BIT && !queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			indices.presentation_family = queue_index;
+			info(std::string("\tQueue ") + std::to_string(queue_index) + " is able to present");
+		}
+
 		if (indices.isComplete()) {
 			succ("\tQueues are suitable, aborting search");
 			break;
