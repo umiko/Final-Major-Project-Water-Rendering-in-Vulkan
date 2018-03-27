@@ -93,6 +93,8 @@ private:
 	VkPipelineLayout m_pipeline_layout;
 	VkPipeline m_graphics_pipeline;
 	VkCommandPool m_command_pool;
+	VkBuffer m_vertex_buffer;
+	VkDeviceMemory m_vertex_buffer_memory;
 
 	std::vector<VkImage> m_swapchain_images;
 	std::vector<VkImageView> m_swapchain_image_views;
@@ -109,7 +111,7 @@ private:
 	const std::vector<const char*> device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 	const std::vector<Vertex> vertices = {
-		{ { 0.0f, -0.5f },{ 1.0f, 0.0f, 0.0f } },
+		{ { 0.0f, -0.5f },{ 1.0f, 1.0f, 1.0f } },
 		{ { 0.5f, 0.5f },{ 0.0f, 1.0f, 0.0f } },
 		{ { -0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f } }
 	};
@@ -138,6 +140,7 @@ private:
 	void create_graphics_pipeline();
 	void create_framebuffers();
 	void create_command_pool();
+	void create_vertex_buffer();
 	void create_command_buffers();
 	void create_semaphores();
 
@@ -167,6 +170,7 @@ private:
 	VkPresentModeKHR choose_swapchain_present_mode(const std::vector<VkPresentModeKHR> available_present_modes);
 	VkExtent2D choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &capabilities);
 	VkShaderModule create_shader_module(const std::vector<char> &code);
+	uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
 
 	//Debug stuff
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);

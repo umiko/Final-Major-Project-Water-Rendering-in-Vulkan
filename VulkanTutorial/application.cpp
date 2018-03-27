@@ -58,6 +58,7 @@ void Application::initialize_vulkan()
 	create_graphics_pipeline();
 	create_framebuffers();
 	create_command_pool();
+	create_vertex_buffer();
 	create_command_buffers();
 	create_semaphores();
 	succ("Vulkan Initialized");
@@ -458,7 +459,7 @@ void Application::create_graphics_pipeline()
 	rasterization_state_create_info.depthClampEnable = VK_FALSE;
 	rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
 	//TODO: this is where you wireframe, REQUIRES A GPU FEATURE
-	rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_LINE;
+	rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterization_state_create_info.lineWidth = 1.0f;
 	rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
 	rasterization_state_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
@@ -595,6 +596,38 @@ void Application::create_command_pool()
 	succ("Command Pool created");
 }
 
+void Application::create_vertex_buffer()
+{
+	VkBufferCreateInfo buffer_create_info = {};
+	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_create_info.size = sizeof(vertices[0]) * vertices.size();
+	buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (vkCreateBuffer(m_logical_device, &buffer_create_info, nullptr, &m_vertex_buffer) != VK_SUCCESS) {
+		throw std::runtime_error("Vertex buffer creation failed");
+	}
+
+	VkMemoryRequirements memory_requirements;
+	vkGetBufferMemoryRequirements(m_logical_device, m_vertex_buffer, &memory_requirements);
+
+	VkMemoryAllocateInfo memory_allocate_info = {};
+	memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memory_allocate_info.allocationSize = memory_requirements.size;
+	memory_allocate_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	if(vkAllocateMemory(m_logical_device, &memory_allocate_info, nullptr, &m_vertex_buffer_memory)!= VK_SUCCESS) {
+		throw std::runtime_error("Vertex buffer memory allocatiion failed");
+	}
+
+	vkBindBufferMemory(m_logical_device, m_vertex_buffer, m_vertex_buffer_memory, 0);
+
+	void* data;
+	vkMapMemory(m_logical_device, m_vertex_buffer_memory, 0, buffer_create_info.size, 0, &data);
+	memcpy(data, vertices.data(), (size_t)buffer_create_info.size);
+	vkUnmapMemory(m_logical_device, m_vertex_buffer_memory);
+}
+
 void Application::create_command_buffers()
 {
 	info("Creating Command Buffers...");
@@ -634,7 +667,12 @@ void Application::create_command_buffers()
 
 		vkCmdBindPipeline(m_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
 
-		vkCmdDraw(m_command_buffers[i], 3, 1, 0, 0);
+		VkBuffer vertex_buffers[] = { m_vertex_buffer };
+		VkDeviceSize offsets[] = { 0 };
+
+		vkCmdBindVertexBuffers(m_command_buffers[i], 0, 1, vertex_buffers, offsets);
+
+		vkCmdDraw(m_command_buffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 		vkCmdEndRenderPass(m_command_buffers[i]);
 
@@ -847,7 +885,7 @@ int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical
 		break;
 	}
 	score += device_properties.limits.maxImageDimension2D;
-	if (device_features.fillModeNonSolid) {
+	if (!device_features.fillModeNonSolid) {
 		warn("Wireframe not supported, switching to wireframe will not be available.");
 		//TODO: dont allow wireframe switching
 	}
@@ -934,6 +972,19 @@ VkShaderModule Application::create_shader_module(const std::vector<char>& code)
 		throw std::runtime_error("ShaderModule creation failed");
 	}
 	return shader_module;
+}
+
+uint32_t Application::find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties)
+{
+	VkPhysicalDeviceMemoryProperties memory_properties;
+	vkGetPhysicalDeviceMemoryProperties(m_physical_device, &memory_properties);
+
+	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
+		if ((type_filter & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & properties)==properties) {
+			return i;
+		}
+	}
+	throw std::runtime_error("No suitable memory found");
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
@@ -1067,6 +1118,9 @@ void Application::clean_up()
 {
 	info("Cleaning up...");
 	clean_up_swapchain();
+
+	vkDestroyBuffer(m_logical_device, m_vertex_buffer, nullptr);
+	vkFreeMemory(m_logical_device, m_vertex_buffer_memory, nullptr);
 	vkDestroySemaphore(m_logical_device, m_render_finished_semaphore, nullptr);
 	vkDestroySemaphore(m_logical_device, m_image_available_semaphore, nullptr);
 
