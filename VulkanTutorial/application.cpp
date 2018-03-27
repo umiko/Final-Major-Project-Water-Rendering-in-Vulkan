@@ -598,34 +598,24 @@ void Application::create_command_pool()
 
 void Application::create_vertex_buffer()
 {
-	VkBufferCreateInfo buffer_create_info = {};
-	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_create_info.size = sizeof(vertices[0]) * vertices.size();
-	buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-	if (vkCreateBuffer(m_logical_device, &buffer_create_info, nullptr, &m_vertex_buffer) != VK_SUCCESS) {
-		throw std::runtime_error("Vertex buffer creation failed");
-	}
-
-	VkMemoryRequirements memory_requirements;
-	vkGetBufferMemoryRequirements(m_logical_device, m_vertex_buffer, &memory_requirements);
-
-	VkMemoryAllocateInfo memory_allocate_info = {};
-	memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	memory_allocate_info.allocationSize = memory_requirements.size;
-	memory_allocate_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	if(vkAllocateMemory(m_logical_device, &memory_allocate_info, nullptr, &m_vertex_buffer_memory)!= VK_SUCCESS) {
-		throw std::runtime_error("Vertex buffer memory allocatiion failed");
-	}
-
-	vkBindBufferMemory(m_logical_device, m_vertex_buffer, m_vertex_buffer_memory, 0);
+	info("Creating vertex buffer...");
+	VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
+	VkBuffer staging_buffer;
+	VkDeviceMemory staging_buffer_memory;
+	create_buffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging_buffer, staging_buffer_memory);
 
 	void* data;
-	vkMapMemory(m_logical_device, m_vertex_buffer_memory, 0, buffer_create_info.size, 0, &data);
-	memcpy(data, vertices.data(), (size_t)buffer_create_info.size);
-	vkUnmapMemory(m_logical_device, m_vertex_buffer_memory);
+	vkMapMemory(m_logical_device, staging_buffer_memory, 0, buffer_size, 0, &data);
+	memcpy(data, vertices.data(), (size_t)buffer_size);
+	vkUnmapMemory(m_logical_device, staging_buffer_memory);
+
+	create_buffer(buffer_size,VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertex_buffer, m_vertex_buffer_memory);
+
+	copy_buffer(staging_buffer, m_vertex_buffer, buffer_size);
+	vkDestroyBuffer(m_logical_device, staging_buffer, nullptr);
+	vkFreeMemory(m_logical_device, staging_buffer_memory, nullptr);
+	
+	succ("Vertex buffer created");
 }
 
 void Application::create_command_buffers()
@@ -985,6 +975,71 @@ uint32_t Application::find_memory_type(uint32_t type_filter, VkMemoryPropertyFla
 		}
 	}
 	throw std::runtime_error("No suitable memory found");
+}
+
+void Application::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & buffer_memory)
+{
+	info("Creating buffer...");
+	VkBufferCreateInfo buffer_create_info = {};
+	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_create_info.size = size;
+	buffer_create_info.usage = usage;
+	buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (vkCreateBuffer(m_logical_device, &buffer_create_info, nullptr, &buffer) != VK_SUCCESS) {
+		throw std::runtime_error("Vertex buffer creation failed");
+	}
+
+	VkMemoryRequirements memory_requirements;
+	vkGetBufferMemoryRequirements(m_logical_device, buffer, &memory_requirements);
+
+	VkMemoryAllocateInfo memory_allocate_info = {};
+	memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memory_allocate_info.allocationSize = memory_requirements.size;
+	memory_allocate_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits,properties);
+
+	if (vkAllocateMemory(m_logical_device, &memory_allocate_info, nullptr, &buffer_memory) != VK_SUCCESS) {
+		throw std::runtime_error("Vertex buffer memory allocatiion failed");
+	}
+
+	vkBindBufferMemory(m_logical_device, buffer, buffer_memory, 0);
+	succ("Buffer created successfully");
+}
+
+void Application::copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size)
+{
+	info("Copying buffer...");
+	VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	command_buffer_allocate_info.commandPool = m_command_pool;
+	command_buffer_allocate_info.commandBufferCount = 1;
+
+	VkCommandBuffer command_buffer;
+	vkAllocateCommandBuffers(m_logical_device, &command_buffer_allocate_info, &command_buffer);
+	VkCommandBufferBeginInfo command_buffer_begin_info = {};
+	command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
+
+	VkBufferCopy copy_region = {};
+	copy_region.srcOffset = 0;
+	copy_region.dstOffset = 0;
+	copy_region.size = size;
+	vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
+
+	vkEndCommandBuffer(command_buffer);
+
+	VkSubmitInfo submit_info = {};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &command_buffer;
+
+	vkQueueSubmit(m_graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
+	vkQueueWaitIdle(m_graphics_queue);
+
+	vkFreeCommandBuffers(m_logical_device, m_command_pool, 1, &command_buffer);
+	succ("Buffer copied");
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
