@@ -59,6 +59,7 @@ void Application::initialize_vulkan()
 	create_framebuffers();
 	create_command_pool();
 	create_vertex_buffer();
+	create_index_buffer();
 	create_command_buffers();
 	create_semaphores();
 	succ("Vulkan Initialized");
@@ -599,14 +600,14 @@ void Application::create_command_pool()
 void Application::create_vertex_buffer()
 {
 	info("Creating vertex buffer...");
-	VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
+	VkDeviceSize buffer_size = sizeof(m_vertices[0]) * m_vertices.size();
 	VkBuffer staging_buffer;
 	VkDeviceMemory staging_buffer_memory;
 	create_buffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging_buffer, staging_buffer_memory);
 
 	void* data;
 	vkMapMemory(m_logical_device, staging_buffer_memory, 0, buffer_size, 0, &data);
-	memcpy(data, vertices.data(), (size_t)buffer_size);
+	memcpy(data, m_vertices.data(), (size_t)buffer_size);
 	vkUnmapMemory(m_logical_device, staging_buffer_memory);
 
 	create_buffer(buffer_size,VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertex_buffer, m_vertex_buffer_memory);
@@ -616,6 +617,26 @@ void Application::create_vertex_buffer()
 	vkFreeMemory(m_logical_device, staging_buffer_memory, nullptr);
 	
 	succ("Vertex buffer created");
+}
+
+void Application::create_index_buffer()
+{
+	VkDeviceSize buffer_size = sizeof(m_indices) * m_indices.size();
+	VkBuffer staging_buffer;
+	VkDeviceMemory staging_buffer_memory;
+	create_buffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging_buffer, staging_buffer_memory);
+
+	void* data;
+	vkMapMemory(m_logical_device, staging_buffer_memory, 0, buffer_size, 0, &data);
+	memcpy(data, m_indices.data(), (size_t)buffer_size);
+	vkUnmapMemory(m_logical_device, staging_buffer_memory);
+
+	create_buffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_index_buffer, m_index_buffer_memory);
+
+	copy_buffer(staging_buffer, m_index_buffer, buffer_size);
+
+	vkDestroyBuffer(m_logical_device, staging_buffer, nullptr);
+	vkFreeMemory(m_logical_device, staging_buffer_memory, nullptr);
 }
 
 void Application::create_command_buffers()
@@ -662,7 +683,9 @@ void Application::create_command_buffers()
 
 		vkCmdBindVertexBuffers(m_command_buffers[i], 0, 1, vertex_buffers, offsets);
 
-		vkCmdDraw(m_command_buffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+		vkCmdBindIndexBuffer(m_command_buffers[i], m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+		vkCmdDrawIndexed(m_command_buffers[i], static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(m_command_buffers[i]);
 
@@ -1173,7 +1196,8 @@ void Application::clean_up()
 {
 	info("Cleaning up...");
 	clean_up_swapchain();
-
+	vkDestroyBuffer(m_logical_device, m_index_buffer, nullptr);
+	vkFreeMemory(m_logical_device, m_index_buffer_memory, nullptr);
 	vkDestroyBuffer(m_logical_device, m_vertex_buffer, nullptr);
 	vkFreeMemory(m_logical_device, m_vertex_buffer_memory, nullptr);
 	vkDestroySemaphore(m_logical_device, m_render_finished_semaphore, nullptr);

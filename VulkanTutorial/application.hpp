@@ -95,6 +95,9 @@ private:
 	VkCommandPool m_command_pool;
 	VkBuffer m_vertex_buffer;
 	VkDeviceMemory m_vertex_buffer_memory;
+	VkBuffer m_index_buffer;
+	VkDeviceMemory m_index_buffer_memory;
+
 
 	std::vector<VkImage> m_swapchain_images;
 	std::vector<VkImageView> m_swapchain_image_views;
@@ -110,11 +113,15 @@ private:
 
 	const std::vector<const char*> device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-	const std::vector<Vertex> vertices = {
-		{ { 0.0f, -0.5f },{ 1.0f, 1.0f, 1.0f } },
-		{ { 0.5f, 0.5f },{ 0.0f, 1.0f, 0.0f } },
-		{ { -0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f } }
+	const std::vector<Vertex> m_vertices = {
+		{ {-0.5f, -0.5f},{1.0f, 0.0f, 0.0f} },
+		{ { 0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
+		{ { 0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f } },
+		{ { -0.5f, 0.5f },{ 1.0f, 1.0f, 1.0f } }
 	};
+
+	const std::vector<uint16_t> m_indices{ 0,1,2,2,3,0 };
+
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
@@ -141,6 +148,7 @@ private:
 	void create_framebuffers();
 	void create_command_pool();
 	void create_vertex_buffer();
+	void create_index_buffer();
 	void create_command_buffers();
 	void create_semaphores();
 
