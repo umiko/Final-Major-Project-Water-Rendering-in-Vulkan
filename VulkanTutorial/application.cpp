@@ -60,6 +60,7 @@ void Application::initialize_vulkan()
 	create_command_pool();
 	create_vertex_buffer();
 	create_index_buffer();
+	create_uniform_buffer();
 	create_command_buffers();
 	create_semaphores();
 	succ("Vulkan Initialized");
@@ -69,6 +70,7 @@ void Application::main_loop()
 {
 	while (!glfwWindowShouldClose(m_window)) {
 		glfwPollEvents();
+		update_uniform_buffer();
 		//TODO: update goes here
 		draw_frame();
 	}
@@ -394,6 +396,25 @@ void Application::create_render_pass()
 	succ("Render Pass Created");
 }
 
+void Application::create_descriptor_set_layout()
+{
+	VkDescriptorSetLayoutBinding ubo_layout_binding = {};
+	ubo_layout_binding.binding = 0;
+	ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	ubo_layout_binding.descriptorCount = 1;
+	ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	ubo_layout_binding.pImmutableSamplers = nullptr;
+
+	VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {};
+	descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	descriptor_set_layout_create_info.bindingCount = 1;
+	descriptor_set_layout_create_info.pBindings = &ubo_layout_binding;
+
+	if (vkCreateDescriptorSetLayout(m_logical_device, &descriptor_set_layout_create_info, nullptr, &m_descriptor_set_layout) != VK_SUCCESS) {
+		throw std::runtime_error("Failed creating descriptor set layout");
+	}
+}
+
 void Application::create_graphics_pipeline()
 {
 	info("Creating graphics pipeline...");
@@ -513,8 +534,8 @@ void Application::create_graphics_pipeline()
 
 	VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
 	pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipeline_layout_create_info.setLayoutCount = 0;
-	pipeline_layout_create_info.pSetLayouts = nullptr;
+	pipeline_layout_create_info.setLayoutCount = 1;
+	pipeline_layout_create_info.pSetLayouts = &m_descriptor_set_layout;
 	pipeline_layout_create_info.pushConstantRangeCount = 0;
 	pipeline_layout_create_info.pPushConstantRanges = nullptr;
 
@@ -637,6 +658,14 @@ void Application::create_index_buffer()
 
 	vkDestroyBuffer(m_logical_device, staging_buffer, nullptr);
 	vkFreeMemory(m_logical_device, staging_buffer_memory, nullptr);
+}
+
+void Application::create_uniform_buffer()
+{
+	VkDeviceSize buffer_size = sizeof(UniformBufferObject);
+	create_buffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniform_buffer, m_uniform_buffer_memory);
+
+
 }
 
 void Application::create_command_buffers()
@@ -763,6 +792,24 @@ void Application::draw_frame()
 	}
 
 	vkQueueWaitIdle(m_presentation_queue);
+}
+
+void Application::update_uniform_buffer()
+{
+	static auto start_time = std::chrono::high_resolution_clock::now();
+	auto current_time = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
+
+	UniformBufferObject ubo = {};
+	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.projection = glm::perspective(glm::radians(45.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.0f);
+	ubo.projection[1][1] *= -1;
+
+	void* data;
+	vkMapMemory(m_logical_device, m_uniform_buffer_memory, 0, sizeof(ubo), 0, &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	vkUnmapMemory(m_logical_device, m_uniform_buffer_memory);
 }
 
 void Application::recreate_swapchain()
@@ -1196,6 +1243,10 @@ void Application::clean_up()
 {
 	info("Cleaning up...");
 	clean_up_swapchain();
+
+	vkDestroyDescriptorSetLayout(m_logical_device, m_descriptor_set_layout, nullptr);
+	vkDestroyBuffer(m_logical_device, m_uniform_buffer, nullptr);
+	vkFreeMemory(m_logical_device, m_uniform_buffer_memory, nullptr);
 	vkDestroyBuffer(m_logical_device, m_index_buffer, nullptr);
 	vkFreeMemory(m_logical_device, m_index_buffer_memory, nullptr);
 	vkDestroyBuffer(m_logical_device, m_vertex_buffer, nullptr);

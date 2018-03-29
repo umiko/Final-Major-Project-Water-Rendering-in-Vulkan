@@ -12,8 +12,11 @@
 #include <set>
 #include <algorithm>
 #include <array>
+#include <chrono>
 
+#define GLM_FORCE_RADIANS
 #include <glm\glm.hpp>
+#include <glm\gtc\matrix_transform.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -65,6 +68,12 @@ struct Vertex {
 	}
 };
 
+struct UniformBufferObject {
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 projection;
+};
+
 class Application {
 public:
 	void run();
@@ -90,6 +99,7 @@ private:
 	VkFormat m_swapchain_image_format;
 	VkExtent2D m_swapchain_extent;
 	VkRenderPass m_render_pass;
+	VkDescriptorSetLayout m_descriptor_set_layout;
 	VkPipelineLayout m_pipeline_layout;
 	VkPipeline m_graphics_pipeline;
 	VkCommandPool m_command_pool;
@@ -97,7 +107,8 @@ private:
 	VkDeviceMemory m_vertex_buffer_memory;
 	VkBuffer m_index_buffer;
 	VkDeviceMemory m_index_buffer_memory;
-
+	VkBuffer m_uniform_buffer;
+	VkDeviceMemory m_uniform_buffer_memory;
 
 	std::vector<VkImage> m_swapchain_images;
 	std::vector<VkImageView> m_swapchain_image_views;
@@ -144,15 +155,18 @@ private:
 	void create_swapchain();
 	void create_image_views();
 	void create_render_pass();
+	void create_descriptor_set_layout();
 	void create_graphics_pipeline();
 	void create_framebuffers();
 	void create_command_pool();
 	void create_vertex_buffer();
 	void create_index_buffer();
+	void create_uniform_buffer();
 	void create_command_buffers();
 	void create_semaphores();
 
 	void draw_frame();
+	void update_uniform_buffer();
 
 	void recreate_swapchain();
 
