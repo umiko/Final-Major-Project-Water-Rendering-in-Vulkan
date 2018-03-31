@@ -55,12 +55,15 @@ void Application::initialize_vulkan()
 	create_swapchain();
 	create_image_views();
 	create_render_pass();
+	create_descriptor_set_layout();
 	create_graphics_pipeline();
 	create_framebuffers();
 	create_command_pool();
 	create_vertex_buffer();
 	create_index_buffer();
 	create_uniform_buffer();
+	create_descriptor_pool();
+	create_descriptor_set();
 	create_command_buffers();
 	create_semaphores();
 	succ("Vulkan Initialized");
@@ -130,6 +133,7 @@ void Application::create_instance()
 
 void Application::setup_debug_callback()
 {
+	info("Setting up Debug Callback...");
 	if (!enableValidationLayers) return;
 	VkDebugReportCallbackCreateInfoEXT create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
@@ -139,6 +143,7 @@ void Application::setup_debug_callback()
 	if (CreateDebugReportCallbackEXT(m_instance, &create_info, nullptr, &callback) != VK_SUCCESS) {
 		throw std::runtime_error("failed to set up debug callback!");
 	}
+	succ("Debug Callback set up");
 }
 
 bool Application::check_validation_layer_support()
@@ -208,9 +213,11 @@ void Application::pick_physical_device()
 
 void Application::create_surface()
 {
+	info("Creating Surface...");
 	if (glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS) {
 		throw std::runtime_error("Window Surface creation failed");
 	}
+	succ("Surface created");
 }
 
 void Application::create_logical_device()
@@ -253,11 +260,13 @@ void Application::create_logical_device()
 	if (vkCreateDevice(m_physical_device, &logical_device_create_info, nullptr, &m_logical_device) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create logical device");
 	}
-	succ("Logical Device creation Successful!");
 	//single queue, therefore index 0
 	vkGetDeviceQueue(m_logical_device, indices.graphics_family, 0, &m_graphics_queue);
 	//single queue, therefore index 0
 	vkGetDeviceQueue(m_logical_device, indices.presentation_family, 0, &m_presentation_queue);
+
+	succ("Logical Device creation Successful!");
+
 }
 
 void Application::create_swapchain()
@@ -398,6 +407,7 @@ void Application::create_render_pass()
 
 void Application::create_descriptor_set_layout()
 {
+	info("Creating descriptor set layout...");
 	VkDescriptorSetLayoutBinding ubo_layout_binding = {};
 	ubo_layout_binding.binding = 0;
 	ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -413,6 +423,7 @@ void Application::create_descriptor_set_layout()
 	if (vkCreateDescriptorSetLayout(m_logical_device, &descriptor_set_layout_create_info, nullptr, &m_descriptor_set_layout) != VK_SUCCESS) {
 		throw std::runtime_error("Failed creating descriptor set layout");
 	}
+	succ("Descriptor set layout created");
 }
 
 void Application::create_graphics_pipeline()
@@ -484,7 +495,8 @@ void Application::create_graphics_pipeline()
 	rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterization_state_create_info.lineWidth = 1.0f;
 	rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterization_state_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	//has to be counter clockwise because of projection matrix y-flip
+	rasterization_state_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterization_state_create_info.depthBiasEnable = VK_FALSE;
 	rasterization_state_create_info.depthBiasConstantFactor = 0.0f; // Optional
 	rasterization_state_create_info.depthBiasClamp = 0.0f; // Optional
@@ -642,6 +654,7 @@ void Application::create_vertex_buffer()
 
 void Application::create_index_buffer()
 {
+	info("Creating Index Buffer...");
 	VkDeviceSize buffer_size = sizeof(m_indices) * m_indices.size();
 	VkBuffer staging_buffer;
 	VkDeviceMemory staging_buffer_memory;
@@ -658,14 +671,70 @@ void Application::create_index_buffer()
 
 	vkDestroyBuffer(m_logical_device, staging_buffer, nullptr);
 	vkFreeMemory(m_logical_device, staging_buffer_memory, nullptr);
+
+	succ("Index Buffer created");
 }
 
 void Application::create_uniform_buffer()
 {
+	info("Creating Uniform Buffer...");
 	VkDeviceSize buffer_size = sizeof(UniformBufferObject);
 	create_buffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniform_buffer, m_uniform_buffer_memory);
+	succ("Uniform Buffer created");
+}
 
+void Application::create_descriptor_pool()
+{
+	info("Creating Descriptor Pool...");
+	VkDescriptorPoolSize descriptor_pool_size = {};
+	descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptor_pool_size.descriptorCount = 1;
 
+	VkDescriptorPoolCreateInfo descriptor_pool_create_info = {};
+	descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	descriptor_pool_create_info.poolSizeCount = 1;
+	descriptor_pool_create_info.pPoolSizes = &descriptor_pool_size;
+	descriptor_pool_create_info.maxSets = 1;
+
+	if (vkCreateDescriptorPool(m_logical_device, &descriptor_pool_create_info, nullptr, &m_descriptor_pool) != VK_SUCCESS) {
+		throw std::runtime_error("Descriptor pool creation failed");
+	}
+	succ("Descriptor Pool created");
+}
+
+void Application::create_descriptor_set()
+{
+	info("Creating Descriptor Set...");
+	VkDescriptorSetLayout descriptor_set_layouts[] = { m_descriptor_set_layout };
+	VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {};
+	descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	descriptor_set_allocate_info.descriptorPool = m_descriptor_pool;
+	descriptor_set_allocate_info.descriptorSetCount = 1;
+	descriptor_set_allocate_info.pSetLayouts = descriptor_set_layouts;
+
+	if (vkAllocateDescriptorSets(m_logical_device, &descriptor_set_allocate_info, &m_descriptor_set) != VK_SUCCESS) {
+		throw std::runtime_error("Descriptor set allocation failed");
+	}
+
+	VkDescriptorBufferInfo descriptor_buffer_info = {};
+	descriptor_buffer_info.buffer = m_uniform_buffer;
+	descriptor_buffer_info.offset = 0;
+	descriptor_buffer_info.range = sizeof(UniformBufferObject);
+
+	VkWriteDescriptorSet write_descriptor_set = {};
+	write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write_descriptor_set.dstSet = m_descriptor_set;
+	write_descriptor_set.dstBinding = 0;
+	write_descriptor_set.dstArrayElement = 0;
+	write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	write_descriptor_set.descriptorCount = 1;
+	write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
+	write_descriptor_set.pImageInfo = nullptr;
+	write_descriptor_set.pTexelBufferView = nullptr;
+
+	vkUpdateDescriptorSets(m_logical_device, 1, &write_descriptor_set, 0, nullptr);
+
+	succ("Descriptor Set created");
 }
 
 void Application::create_command_buffers()
@@ -691,6 +760,8 @@ void Application::create_command_buffers()
 		command_buffer_begin_info.pInheritanceInfo = nullptr;
 
 		vkBeginCommandBuffer(m_command_buffers[i], &command_buffer_begin_info);
+
+		vkCmdBindDescriptorSets(m_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
 
 		VkRenderPassBeginInfo render_pass_begin_info = {};
 		render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -804,6 +875,7 @@ void Application::update_uniform_buffer()
 	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.projection = glm::perspective(glm::radians(45.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.0f);
+	//change y sign because glms clip coordinate is inverted, was designed for opengl, not vulkan after all
 	ubo.projection[1][1] *= -1;
 
 	void* data;
@@ -1049,7 +1121,7 @@ uint32_t Application::find_memory_type(uint32_t type_filter, VkMemoryPropertyFla
 
 void Application::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & buffer_memory)
 {
-	info("Creating buffer...");
+	info("\tCreating buffer...");
 	VkBufferCreateInfo buffer_create_info = {};
 	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	buffer_create_info.size = size;
@@ -1057,7 +1129,7 @@ void Application::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkM
 	buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	if (vkCreateBuffer(m_logical_device, &buffer_create_info, nullptr, &buffer) != VK_SUCCESS) {
-		throw std::runtime_error("Vertex buffer creation failed");
+		throw std::runtime_error("Buffer creation failed");
 	}
 
 	VkMemoryRequirements memory_requirements;
@@ -1069,7 +1141,7 @@ void Application::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkM
 	memory_allocate_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits,properties);
 
 	if (vkAllocateMemory(m_logical_device, &memory_allocate_info, nullptr, &buffer_memory) != VK_SUCCESS) {
-		throw std::runtime_error("Vertex buffer memory allocatiion failed");
+		throw std::runtime_error("Buffer memory allocatiion failed");
 	}
 
 	vkBindBufferMemory(m_logical_device, buffer, buffer_memory, 0);
@@ -1244,9 +1316,11 @@ void Application::clean_up()
 	info("Cleaning up...");
 	clean_up_swapchain();
 
+	vkDestroyDescriptorPool(m_logical_device, m_descriptor_pool, nullptr);
 	vkDestroyDescriptorSetLayout(m_logical_device, m_descriptor_set_layout, nullptr);
 	vkDestroyBuffer(m_logical_device, m_uniform_buffer, nullptr);
 	vkFreeMemory(m_logical_device, m_uniform_buffer_memory, nullptr);
+
 	vkDestroyBuffer(m_logical_device, m_index_buffer, nullptr);
 	vkFreeMemory(m_logical_device, m_index_buffer_memory, nullptr);
 	vkDestroyBuffer(m_logical_device, m_vertex_buffer, nullptr);

@@ -110,6 +110,9 @@ private:
 	VkBuffer m_uniform_buffer;
 	VkDeviceMemory m_uniform_buffer_memory;
 
+	VkDescriptorPool m_descriptor_pool;
+	VkDescriptorSet m_descriptor_set;
+
 	std::vector<VkImage> m_swapchain_images;
 	std::vector<VkImageView> m_swapchain_image_views;
 	std::vector<VkFramebuffer> m_swapchain_framebuffers;
@@ -162,6 +165,8 @@ private:
 	void create_vertex_buffer();
 	void create_index_buffer();
 	void create_uniform_buffer();
+	void create_descriptor_pool();
+	void create_descriptor_set();
 	void create_command_buffers();
 	void create_semaphores();
 
