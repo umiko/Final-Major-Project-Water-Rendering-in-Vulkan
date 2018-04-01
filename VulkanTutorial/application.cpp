@@ -266,7 +266,6 @@ void Application::create_logical_device()
 	vkGetDeviceQueue(m_logical_device, indices.presentation_family, 0, &m_presentation_queue);
 
 	succ("Logical Device creation Successful!");
-
 }
 
 void Application::create_swapchain()
@@ -457,7 +456,7 @@ void Application::create_graphics_pipeline()
 
 	VkPipelineVertexInputStateCreateInfo vertex_input_create_info = {};
 	vertex_input_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertex_input_create_info.vertexBindingDescriptionCount = 1;	
+	vertex_input_create_info.vertexBindingDescriptionCount = 1;
 	vertex_input_create_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attribute_descriptions.size());
 
 	vertex_input_create_info.pVertexBindingDescriptions = &vertex_binding_descriptions;
@@ -643,12 +642,12 @@ void Application::create_vertex_buffer()
 	memcpy(data, m_vertices.data(), (size_t)buffer_size);
 	vkUnmapMemory(m_logical_device, staging_buffer_memory);
 
-	create_buffer(buffer_size,VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertex_buffer, m_vertex_buffer_memory);
+	create_buffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertex_buffer, m_vertex_buffer_memory);
 
 	copy_buffer(staging_buffer, m_vertex_buffer, buffer_size);
 	vkDestroyBuffer(m_logical_device, staging_buffer, nullptr);
 	vkFreeMemory(m_logical_device, staging_buffer_memory, nullptr);
-	
+
 	succ("Vertex buffer created");
 }
 
@@ -886,7 +885,6 @@ void Application::update_uniform_buffer()
 
 void Application::recreate_swapchain()
 {
-
 	int width, height;
 	glfwGetWindowSize(m_window, &width, &height);
 	if (width == 0 || height == 0) return;
@@ -902,8 +900,6 @@ void Application::recreate_swapchain()
 	create_framebuffers();
 	create_command_buffers();
 }
-
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
@@ -1091,8 +1087,6 @@ bool Application::check_instance_extension_support(std::vector<const char*> requ
 	return check_extension_support(required_extensions, supported_extensions);
 }
 
-
-
 VkShaderModule Application::create_shader_module(const std::vector<char>& code)
 {
 	VkShaderModuleCreateInfo create_info = {};
@@ -1112,7 +1106,7 @@ uint32_t Application::find_memory_type(uint32_t type_filter, VkMemoryPropertyFla
 	vkGetPhysicalDeviceMemoryProperties(m_physical_device, &memory_properties);
 
 	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
-		if ((type_filter & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & properties)==properties) {
+		if ((type_filter & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & properties) == properties) {
 			return i;
 		}
 	}
@@ -1138,7 +1132,7 @@ void Application::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkM
 	VkMemoryAllocateInfo memory_allocate_info = {};
 	memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	memory_allocate_info.allocationSize = memory_requirements.size;
-	memory_allocate_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits,properties);
+	memory_allocate_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits, properties);
 
 	if (vkAllocateMemory(m_logical_device, &memory_allocate_info, nullptr, &buffer_memory) != VK_SUCCESS) {
 		throw std::runtime_error("Buffer memory allocatiion failed");
@@ -1194,7 +1188,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT
 void Application::on_window_resized(GLFWwindow* window, int width, int height)
 {
 	Application *app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-	app->recreate_swapchain();	
+	app->recreate_swapchain();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1253,7 +1247,6 @@ VkExtent2D Application::choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &
 }
 #pragma endregion
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////
 ////							Proxy Functions
@@ -1261,7 +1254,6 @@ VkExtent2D Application::choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma region Vulkan Proxy Function
-
 
 VkResult Application::CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT * pCreateInfo, const VkAllocationCallbacks * pAllocator, VkDebugReportCallbackEXT * pCallback) {
 	auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
@@ -1290,7 +1282,6 @@ void Application::DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugRepo
 
 #pragma region Clean Up
 
-
 void Application::clean_up_swapchain()
 {
 	info("Cleaning up swapchain...");
@@ -1308,8 +1299,6 @@ void Application::clean_up_swapchain()
 	vkDestroySwapchainKHR(m_logical_device, m_swapchain, nullptr);
 	succ("Swapchain cleaned successfully");
 }
-
-
 
 void Application::clean_up()
 {
@@ -1329,18 +1318,15 @@ void Application::clean_up()
 	vkDestroySemaphore(m_logical_device, m_image_available_semaphore, nullptr);
 
 	vkDestroyCommandPool(m_logical_device, m_command_pool, nullptr);
-	
 
 	vkDestroyDevice(m_logical_device, nullptr);
 	DestroyDebugReportCallbackEXT(m_instance, callback, nullptr);
 	vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
 
-
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
 	succ("Cleanup complete");
 }
-
 
 #pragma endregion

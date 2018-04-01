@@ -136,7 +136,6 @@ private:
 
 	const std::vector<uint16_t> m_indices{ 0,1,2,2,3,0 };
 
-
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
 #else
