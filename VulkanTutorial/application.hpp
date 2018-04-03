@@ -116,6 +116,9 @@ private:
 	VkDescriptorPool m_descriptor_pool;
 	VkDescriptorSet m_descriptor_set;
 
+	VkImage m_texture_image;
+	VkDeviceMemory m_texture_image_memory;
+
 	std::vector<VkImage> m_swapchain_images;
 	std::vector<VkImageView> m_swapchain_image_views;
 	std::vector<VkFramebuffer> m_swapchain_framebuffers;
@@ -164,6 +167,9 @@ private:
 	void create_graphics_pipeline();
 	void create_framebuffers();
 	void create_command_pool();
+
+	void create_texture_image();
+
 	void create_vertex_buffer();
 	void create_index_buffer();
 	void create_uniform_buffer();
@@ -200,7 +206,14 @@ private:
 	VkExtent2D choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &capabilities);
 	VkShaderModule create_shader_module(const std::vector<char> &code);
 	uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
+	void transition_image_layout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
+	void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+	VkCommandBuffer begin_single_time_commands();
+	void end_single_time_commands(VkCommandBuffer command_buffer);
+
 	void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+	void create_image(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &image_memory);
 	void copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
 	//Debug stuff
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
