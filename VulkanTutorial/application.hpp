@@ -45,6 +45,7 @@ struct SwapChainSupportDetails {
 struct Vertex {
 	glm::vec2 position;
 	glm::vec3 color;
+	glm::vec2 texcoord;
 
 	static VkVertexInputBindingDescription get_binding_description() {
 		VkVertexInputBindingDescription vertex_input_binding_description = {};
@@ -55,8 +56,8 @@ struct Vertex {
 		return vertex_input_binding_description;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 2> get_attribute_descriptions() {
-		std::array<VkVertexInputAttributeDescription, 2> vertex_input_attribute_descriptions = {};
+	static std::array<VkVertexInputAttributeDescription, 3> get_attribute_descriptions() {
+		std::array<VkVertexInputAttributeDescription, 3> vertex_input_attribute_descriptions = {};
 		vertex_input_attribute_descriptions[0].binding = 0;
 		vertex_input_attribute_descriptions[0].location = 0;
 		vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
@@ -66,6 +67,11 @@ struct Vertex {
 		vertex_input_attribute_descriptions[1].location = 1;
 		vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 		vertex_input_attribute_descriptions[1].offset = offsetof(Vertex, color);
+
+		vertex_input_attribute_descriptions[2].binding = 0;
+		vertex_input_attribute_descriptions[2].location = 2;
+		vertex_input_attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		vertex_input_attribute_descriptions[2].offset = offsetof(Vertex, texcoord);
 
 		return vertex_input_attribute_descriptions;
 	}
@@ -137,10 +143,10 @@ private:
 	const std::vector<const char*> device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 	const std::vector<Vertex> m_vertices = {
-		{ {-0.5f, -0.5f},{1.0f, 0.0f, 0.0f} },
-		{ { 0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
-		{ { 0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f } },
-		{ { -0.5f, 0.5f },{ 1.0f, 1.0f, 1.0f } }
+		{ {-0.5f, -0.5f},{1.0f, 0.0f, 0.0f}, {1.0f, 0.0f} },
+		{ { 0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f }, {0.0f,0.0f} },
+		{ { 0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f }, {0.0f, 1.0f} },
+		{ { -0.5f, 0.5f },{ 1.0f, 1.0f, 1.0f }, {1.0f, 1.0f} }
 	};
 
 	const std::vector<uint16_t> m_indices{ 0,1,2,2,3,0 };
