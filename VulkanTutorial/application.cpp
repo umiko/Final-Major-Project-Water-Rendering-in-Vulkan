@@ -61,6 +61,8 @@ void Application::initialize_vulkan()
 	create_command_pool();
 
 	create_texture_image();
+	create_texture_image_view();
+	create_texture_sampler();
 
 	create_vertex_buffer();
 	create_index_buffer();
@@ -245,6 +247,7 @@ void Application::create_logical_device()
 	VkPhysicalDeviceFeatures device_features = {};
 	//TODO: Wireframe happens here
 	device_features.fillModeNonSolid = VK_TRUE;
+	device_features.samplerAnisotropy = VK_TRUE;
 
 	VkDeviceCreateInfo logical_device_create_info = {};
 	logical_device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -335,26 +338,7 @@ void Application::create_image_views()
 	info("Creating image views...");
 	m_swapchain_image_views.resize(m_swapchain_images.size());
 	for (size_t i = 0; i < m_swapchain_images.size(); i++) {
-		VkImageViewCreateInfo create_info = {};
-		create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		create_info.image = m_swapchain_images[i];
-		create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		create_info.format = m_swapchain_image_format;
-
-		create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-		create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-		create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-		create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-		create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		create_info.subresourceRange.baseMipLevel = 0;
-		create_info.subresourceRange.levelCount = 1;
-		create_info.subresourceRange.baseArrayLayer = 0;
-		create_info.subresourceRange.layerCount = 1;
-
-		if (vkCreateImageView(m_logical_device, &create_info, nullptr, &m_swapchain_image_views[i]) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create image views");
-		}
+		m_swapchain_image_views[i] = create_image_view(m_swapchain_images[i], VK_FORMAT_R8G8B8A8_UNORM);
 	}
 	succ("Image Views created");
 }
@@ -657,8 +641,45 @@ void Application::create_texture_image()
 
 	create_image(texture_width, texture_height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_texture_image, m_texture_image_memory);
 
+	transition_image_layout(m_texture_image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	copy_buffer_to_image(staging_buffer, m_texture_image, static_cast<uint32_t>(texture_width), static_cast<uint32_t>(texture_height));
+	transition_image_layout(m_texture_image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	vkDestroyBuffer(m_logical_device, staging_buffer, nullptr);
+	vkFreeMemory(m_logical_device, staging_buffer_memory, nullptr);
+
 	succ("Texture Image created");
 
+}
+
+void Application::create_texture_image_view()
+{
+	m_texture_image_view = create_image_view(m_texture_image, VK_FORMAT_R8G8B8A8_UNORM);
+}
+
+void Application::create_texture_sampler()
+{
+	VkSamplerCreateInfo sampler_create_info = {};
+	sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	sampler_create_info.magFilter = VK_FILTER_LINEAR;
+	sampler_create_info.minFilter = VK_FILTER_LINEAR;
+	sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_create_info.anisotropyEnable = VK_TRUE;
+	sampler_create_info.maxAnisotropy = 16;
+	sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	sampler_create_info.unnormalizedCoordinates = VK_FALSE;
+	sampler_create_info.compareEnable = VK_FALSE;
+	sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
+	sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	sampler_create_info.mipLodBias = 0.0f;
+	sampler_create_info.minLod = 0.0f;
+	sampler_create_info.maxLod = 0.0f;
+
+	if (vkCreateSampler(m_logical_device, &sampler_create_info, nullptr, &m_texture_sampler) != VK_SUCCESS) {
+		throw std::runtime_error("Texture Sampler Creation failed");
+	}
 }
 
 void Application::create_vertex_buffer()
@@ -1050,6 +1071,12 @@ int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical
 		//TODO: dont allow wireframe switching
 	}
 
+	if (!device_features.samplerAnisotropy) {
+		warn("Anisotrpic filter not supported");
+		//TODO: dont allow anisotropic filtering
+
+	}
+
 	if (!device_features.geometryShader) {
 		score = 0;
 		warn(std::string("\t") + device_properties.deviceName + " has no geometry shader and is therefore scoring " + std::to_string(score));
@@ -1162,9 +1189,28 @@ void Application::transition_image_layout(VkImage image, VkFormat format, VkImag
 	image_memory_barrier.srcAccessMask = 0;
 	image_memory_barrier.dstAccessMask = 0;
 
-	vkCmdPipelineBarrier(command_buffer, 0, 0, 0, 0, nullptr, 0, nullptr, 1, &image_memory_barrier);
+	VkPipelineStageFlags source_stage;
+	VkPipelineStageFlags destination_stage;
 
+	if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+		image_memory_barrier.srcAccessMask = 0;
+		image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
+		source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	}
+	else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+		image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
+	else {
+		throw std::invalid_argument("unsupported layout transition");
+	}
+
+	vkCmdPipelineBarrier(command_buffer, source_stage, destination_stage, 0, 0, nullptr, 0, nullptr, 1, &image_memory_barrier);
 
 	end_single_time_commands(command_buffer);
 }
@@ -1297,6 +1343,34 @@ void Application::create_image(uint32_t width, uint32_t height, VkFormat format,
 
 	vkBindImageMemory(m_logical_device, image, image_memory, 0);
 	succ("Image created");
+}
+
+VkImageView Application::create_image_view(VkImage image, VkFormat format)
+{
+	VkImageViewCreateInfo create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	create_info.image = image;
+	create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	create_info.format = format;
+
+	create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+	create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	create_info.subresourceRange.baseMipLevel = 0;
+	create_info.subresourceRange.levelCount = 1;
+	create_info.subresourceRange.baseArrayLayer = 0;
+	create_info.subresourceRange.layerCount = 1;
+
+	VkImageView image_view;
+
+	if (vkCreateImageView(m_logical_device, &create_info, nullptr, &image_view) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create texture image views");
+	}
+
+	return image_view;
 }
 
 void Application::copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size)
@@ -1442,6 +1516,12 @@ void Application::clean_up()
 {
 	info("Cleaning up...");
 	clean_up_swapchain();
+
+	vkDestroySampler(m_logical_device, m_texture_sampler, nullptr);
+	vkDestroyImageView(m_logical_device, m_texture_image_view, nullptr);
+
+	vkDestroyImage(m_logical_device, m_texture_image, nullptr);
+	vkFreeMemory(m_logical_device, m_texture_image_memory, nullptr);
 
 	vkDestroyDescriptorPool(m_logical_device, m_descriptor_pool, nullptr);
 	vkDestroyDescriptorSetLayout(m_logical_device, m_descriptor_set_layout, nullptr);

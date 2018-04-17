@@ -119,6 +119,9 @@ private:
 	VkImage m_texture_image;
 	VkDeviceMemory m_texture_image_memory;
 
+	VkImageView m_texture_image_view;
+	VkSampler m_texture_sampler;
+
 	std::vector<VkImage> m_swapchain_images;
 	std::vector<VkImageView> m_swapchain_image_views;
 	std::vector<VkFramebuffer> m_swapchain_framebuffers;
@@ -169,6 +172,8 @@ private:
 	void create_command_pool();
 
 	void create_texture_image();
+	void create_texture_image_view();
+	void create_texture_sampler();
 
 	void create_vertex_buffer();
 	void create_index_buffer();
@@ -214,6 +219,7 @@ private:
 
 	void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void create_image(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &image_memory);
+	VkImageView create_image_view(VkImage image, VkFormat format);
 	void copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
 	//Debug stuff
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
