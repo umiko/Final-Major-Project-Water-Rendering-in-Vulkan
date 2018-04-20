@@ -14,6 +14,9 @@
 #include <array>
 #include <chrono>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 #define GLM_FORCE_RADIANS
 #include <glm\glm.hpp>
 #include <glm\gtc\matrix_transform.hpp>
@@ -42,6 +45,7 @@ struct SwapChainSupportDetails {
 struct Vertex {
 	glm::vec2 position;
 	glm::vec3 color;
+	glm::vec2 texcoord;
 
 	static VkVertexInputBindingDescription get_binding_description() {
 		VkVertexInputBindingDescription vertex_input_binding_description = {};
@@ -52,8 +56,8 @@ struct Vertex {
 		return vertex_input_binding_description;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 2> get_attribute_descriptions() {
-		std::array<VkVertexInputAttributeDescription, 2> vertex_input_attribute_descriptions = {};
+	static std::array<VkVertexInputAttributeDescription, 3> get_attribute_descriptions() {
+		std::array<VkVertexInputAttributeDescription, 3> vertex_input_attribute_descriptions = {};
 		vertex_input_attribute_descriptions[0].binding = 0;
 		vertex_input_attribute_descriptions[0].location = 0;
 		vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
@@ -63,6 +67,11 @@ struct Vertex {
 		vertex_input_attribute_descriptions[1].location = 1;
 		vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 		vertex_input_attribute_descriptions[1].offset = offsetof(Vertex, color);
+
+		vertex_input_attribute_descriptions[2].binding = 0;
+		vertex_input_attribute_descriptions[2].location = 2;
+		vertex_input_attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		vertex_input_attribute_descriptions[2].offset = offsetof(Vertex, texcoord);
 
 		return vertex_input_attribute_descriptions;
 	}
@@ -113,6 +122,12 @@ private:
 	VkDescriptorPool m_descriptor_pool;
 	VkDescriptorSet m_descriptor_set;
 
+	VkImage m_texture_image;
+	VkDeviceMemory m_texture_image_memory;
+
+	VkImageView m_texture_image_view;
+	VkSampler m_texture_sampler;
+
 	std::vector<VkImage> m_swapchain_images;
 	std::vector<VkImageView> m_swapchain_image_views;
 	std::vector<VkFramebuffer> m_swapchain_framebuffers;
@@ -128,10 +143,10 @@ private:
 	const std::vector<const char*> device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 	const std::vector<Vertex> m_vertices = {
-		{ {-0.5f, -0.5f},{1.0f, 0.0f, 0.0f} },
-		{ { 0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
-		{ { 0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f } },
-		{ { -0.5f, 0.5f },{ 1.0f, 1.0f, 1.0f } }
+		{ { -0.5f, -0.5f },{ 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
+	{ { 0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f } },
+	{ { 0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
+	{ { -0.5f, 0.5f },{ 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
 	};
 
 	const std::vector<uint16_t> m_indices{ 0,1,2,2,3,0 };
@@ -161,6 +176,11 @@ private:
 	void create_graphics_pipeline();
 	void create_framebuffers();
 	void create_command_pool();
+
+	void create_texture_image();
+	void create_texture_image_view();
+	void create_texture_sampler();
+
 	void create_vertex_buffer();
 	void create_index_buffer();
 	void create_uniform_buffer();
@@ -197,7 +217,15 @@ private:
 	VkExtent2D choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &capabilities);
 	VkShaderModule create_shader_module(const std::vector<char> &code);
 	uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
+	void transition_image_layout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
+	void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+	VkCommandBuffer begin_single_time_commands();
+	void end_single_time_commands(VkCommandBuffer command_buffer);
+
 	void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+	void create_image(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &image_memory);
+	VkImageView create_image_view(VkImage image, VkFormat format);
 	void copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
 	//Debug stuff
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
