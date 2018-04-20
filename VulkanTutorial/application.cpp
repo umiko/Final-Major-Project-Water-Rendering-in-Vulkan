@@ -400,7 +400,6 @@ void Application::create_descriptor_set_layout()
 	ubo_layout_binding.descriptorCount = 1;
 	ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	ubo_layout_binding.pImmutableSamplers = nullptr;
-	
 
 	VkDescriptorSetLayoutBinding sampler_layout_binding = {};
 	sampler_layout_binding.binding = 1;
@@ -409,9 +408,8 @@ void Application::create_descriptor_set_layout()
 	sampler_layout_binding.pImmutableSamplers = nullptr;
 	sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-
 	std::array<VkDescriptorSetLayoutBinding, 2> bindings = { ubo_layout_binding, sampler_layout_binding };
-	
+
 	VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {};
 	descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	descriptor_set_layout_create_info.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -499,7 +497,7 @@ void Application::create_graphics_pipeline()
 	rasterization_state_create_info.depthBiasClamp = 0.0f; // Optional
 	rasterization_state_create_info.depthBiasSlopeFactor = 0.0f; // Optional
 
-	//TODO:Depth stencil goes here
+																 //TODO:Depth stencil goes here
 
 	VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {};
 	multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -660,7 +658,6 @@ void Application::create_texture_image()
 	vkFreeMemory(m_logical_device, staging_buffer_memory, nullptr);
 
 	succ("Texture Image created");
-
 }
 
 void Application::create_texture_image_view()
@@ -685,9 +682,6 @@ void Application::create_texture_sampler()
 	sampler_create_info.compareEnable = VK_FALSE;
 	sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
 	sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	sampler_create_info.mipLodBias = 0.0f;
-	sampler_create_info.minLod = 0.0f;
-	sampler_create_info.maxLod = 0.0f;
 
 	if (vkCreateSampler(m_logical_device, &sampler_create_info, nullptr, &m_texture_sampler) != VK_SUCCESS) {
 		throw std::runtime_error("Texture Sampler Creation failed");
@@ -789,7 +783,6 @@ void Application::create_descriptor_set()
 	descriptor_buffer_info.offset = 0;
 	descriptor_buffer_info.range = sizeof(UniformBufferObject);
 
-
 	VkDescriptorImageInfo descriptor_image_info = {};
 	descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	descriptor_image_info.imageView = m_texture_image_view;
@@ -803,8 +796,6 @@ void Application::create_descriptor_set()
 	write_descriptor_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	write_descriptor_sets[0].descriptorCount = 1;
 	write_descriptor_sets[0].pBufferInfo = &descriptor_buffer_info;
-	write_descriptor_sets[0].pImageInfo = nullptr;
-	write_descriptor_sets[0].pTexelBufferView = nullptr;
 
 	write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write_descriptor_sets[1].dstSet = m_descriptor_set;
@@ -812,9 +803,7 @@ void Application::create_descriptor_set()
 	write_descriptor_sets[1].dstArrayElement = 0;
 	write_descriptor_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	write_descriptor_sets[1].descriptorCount = 1;
-	write_descriptor_sets[1].pBufferInfo = nullptr;
 	write_descriptor_sets[1].pImageInfo = &descriptor_image_info;
-	write_descriptor_sets[1].pTexelBufferView = nullptr;
 
 	vkUpdateDescriptorSets(m_logical_device, static_cast<uint32_t>(write_descriptor_sets.size()), write_descriptor_sets.data(), 0, nullptr);
 
@@ -1106,7 +1095,6 @@ int Application::evaluate_physical_device_capabilities(VkPhysicalDevice physical
 	if (!device_features.samplerAnisotropy) {
 		warn("Anisotrpic filter not supported");
 		//TODO: dont allow anisotropic filtering
-
 	}
 
 	if (!device_features.geometryShader) {
@@ -1220,8 +1208,6 @@ void Application::transition_image_layout(VkImage image, VkFormat format, VkImag
 	image_memory_barrier.subresourceRange.levelCount = 1;
 	image_memory_barrier.subresourceRange.baseArrayLayer = 0;
 	image_memory_barrier.subresourceRange.layerCount = 1;
-	image_memory_barrier.srcAccessMask = 0;
-	image_memory_barrier.dstAccessMask = 0;
 
 	VkPipelineStageFlags source_stage;
 	VkPipelineStageFlags destination_stage;
@@ -1253,7 +1239,7 @@ void Application::copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t 
 {
 	info("Copying buffer to image...");
 	VkCommandBuffer command_buffer = begin_single_time_commands();
-	
+
 	VkBufferImageCopy region = {};
 	region.bufferOffset = 0;
 	region.bufferRowLength = 0;
@@ -1262,7 +1248,7 @@ void Application::copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t 
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.imageSubresource.mipLevel = 0;
 	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = 0;
+	region.imageSubresource.layerCount = 1;
 
 	region.imageOffset = { 0,0,0 };
 	region.imageExtent = { width, height, 1 };
@@ -1340,7 +1326,7 @@ void Application::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkM
 	succ("Buffer created successfully");
 }
 
-void Application::create_image(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage & image, VkDeviceMemory & image_memory)
+void Application::create_image(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory)
 {
 	info("Creating image...");
 	VkImageCreateInfo image_create_info = {};
@@ -1357,7 +1343,6 @@ void Application::create_image(uint32_t width, uint32_t height, VkFormat format,
 	image_create_info.usage = usage;
 	image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-	image_create_info.flags = 0;
 
 	if (vkCreateImage(m_logical_device, &image_create_info, nullptr, &image) != VK_SUCCESS) {
 		throw std::runtime_error("Image creation failed");
@@ -1387,12 +1372,6 @@ VkImageView Application::create_image_view(VkImage image, VkFormat format)
 	create_info.image = image;
 	create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
 	create_info.format = format;
-
-	create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-	create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-	create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-	create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
 	create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	create_info.subresourceRange.baseMipLevel = 0;
 	create_info.subresourceRange.levelCount = 1;
@@ -1411,9 +1390,9 @@ VkImageView Application::create_image_view(VkImage image, VkFormat format)
 void Application::copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size)
 {
 	info("Copying buffer...");
-	
+
 	VkCommandBuffer command_buffer = begin_single_time_commands();
-	
+
 	VkBufferCopy copy_region = {};
 	copy_region.srcOffset = 0;
 	copy_region.dstOffset = 0;
