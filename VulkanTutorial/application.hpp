@@ -55,7 +55,7 @@ struct SwapChainSupportDetails
 //a vertex with position, color and texture coordinate
 struct Vertex
 {
-	glm::vec2 position;
+	glm::vec3 position;
 	glm::vec3 color;
 	glm::vec2 texcoord;
 
@@ -74,7 +74,7 @@ struct Vertex
 		std::array<VkVertexInputAttributeDescription, 3> vertex_input_attribute_descriptions = {};
 		vertex_input_attribute_descriptions[0].binding = 0;
 		vertex_input_attribute_descriptions[0].location = 0;
-		vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+		vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 		vertex_input_attribute_descriptions[0].offset = offsetof(Vertex, position);
 
 		vertex_input_attribute_descriptions[1].binding = 0;
@@ -168,10 +168,12 @@ class Application
 	const std::vector<const char *> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 	const std::vector<Vertex> m_vertices = {
-		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
+		{ { -0.5f, -0.5f, 1.0f },{ 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
+	{ { 0.5f, -0.5f, 0.0f },{ 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f } },
+	{ { 0.5f, 0.5f, 0.0f },{ 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
+	{ { -0.5f, 0.5f, 0.0f },{ 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
+	};
+
 
 	const std::vector<uint16_t> m_indices{0, 1, 2, 2, 3, 0};
 
