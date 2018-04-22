@@ -27,27 +27,40 @@
 
 #include "helper.hpp"
 
-struct QueueFamilyIndices {
+//Vulkan works with queues to which commands need to be submitted.
+//Some queues are more suitable than others or can only offer certain features.
+//Therefore we need to make sure that we know which queues support the desired functionality.
+//This struct enables us to save the optimal queue indices and check if all needed queues are found.
+struct QueueFamilyIndices
+{
+	//Index of a queue supporting graphics operations
 	int graphics_family = -1;
+	//Index of a queue supporting presentation operations
 	int presentation_family = -1;
 
-	bool isComplete() {
+	//Returns true if required queues are found
+	bool isComplete()
+	{
 		return graphics_family >= 0 && presentation_family >= 0;
 	}
 };
 
-struct SwapChainSupportDetails {
+struct SwapChainSupportDetails
+{
 	VkSurfaceCapabilitiesKHR capabilities;
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> present_modes;
 };
 
-struct Vertex {
+//a vertex with position, color and texture coordinate
+struct Vertex
+{
 	glm::vec3 position;
 	glm::vec3 color;
 	glm::vec2 texcoord;
 
-	static VkVertexInputBindingDescription get_binding_description() {
+	static VkVertexInputBindingDescription get_binding_description()
+	{
 		VkVertexInputBindingDescription vertex_input_binding_description = {};
 		vertex_input_binding_description.binding = 0;
 		vertex_input_binding_description.stride = sizeof(Vertex);
@@ -56,7 +69,8 @@ struct Vertex {
 		return vertex_input_binding_description;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 3> get_attribute_descriptions() {
+	static std::array<VkVertexInputAttributeDescription, 3> get_attribute_descriptions()
+	{
 		std::array<VkVertexInputAttributeDescription, 3> vertex_input_attribute_descriptions = {};
 		vertex_input_attribute_descriptions[0].binding = 0;
 		vertex_input_attribute_descriptions[0].location = 0;
@@ -77,29 +91,39 @@ struct Vertex {
 	}
 };
 
-struct UniformBufferObject {
+//A uniform or constant buffer.
+//Used to get regularly changing data to the shader
+struct UniformBufferObject
+{
 	glm::mat4 model;
 	glm::mat4 view;
 	glm::mat4 projection;
 };
 
-class Application {
-public:
+//The main application
+class Application
+{
+  public:
 	void run();
-private:
+
+  private:
 	const int WIDTH = 800;
 	const int HEIGHT = 600;
-	const char* WINDOW_TITLE = "Vulkan";
-	GLFWwindow * m_window;
+	const char *WINDOW_TITLE = "Vulkan";
+	const char *APPLICATION_NAME = "Vulkan Playground";
 
-	const char* APPLICATION_NAME = "Vulkan Playground";
+	GLFWwindow *m_window;
+
+	//basics
+
 	VkInstance m_instance;
 	VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
 	VkDevice m_logical_device;
+
+	//queues
+
 	VkQueue m_graphics_queue;
 	VkQueue m_presentation_queue;
-
-	//Debug stuff
 
 	VkDebugReportCallbackEXT callback;
 
@@ -111,6 +135,9 @@ private:
 	VkDescriptorSetLayout m_descriptor_set_layout;
 	VkPipelineLayout m_pipeline_layout;
 	VkPipeline m_graphics_pipeline;
+
+	//buffers, images and pools
+
 	VkCommandPool m_command_pool;
 	VkBuffer m_vertex_buffer;
 	VkDeviceMemory m_vertex_buffer_memory;
@@ -118,13 +145,10 @@ private:
 	VkDeviceMemory m_index_buffer_memory;
 	VkBuffer m_uniform_buffer;
 	VkDeviceMemory m_uniform_buffer_memory;
-
 	VkDescriptorPool m_descriptor_pool;
 	VkDescriptorSet m_descriptor_set;
-
 	VkImage m_texture_image;
 	VkDeviceMemory m_texture_image_memory;
-
 	VkImageView m_texture_image_view;
 	VkSampler m_texture_sampler;
 
@@ -133,14 +157,15 @@ private:
 	std::vector<VkFramebuffer> m_swapchain_framebuffers;
 	std::vector<VkCommandBuffer> m_command_buffers;
 
+	//semaphores
+
 	VkSemaphore m_image_available_semaphore;
 	VkSemaphore m_render_finished_semaphore;
 
-	const std::vector<const char*> validation_layers = {
-		"VK_LAYER_LUNARG_standard_validation", "VK_LAYER_LUNARG_monitor"
-	};
+	const std::vector<const char *> validation_layers = {
+		"VK_LAYER_LUNARG_standard_validation", "VK_LAYER_LUNARG_monitor"};
 
-	const std::vector<const char*> device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	const std::vector<const char *> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 	const std::vector<Vertex> m_vertices = {
 		{ { -0.5f, -0.5f, 1.0f },{ 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
@@ -149,13 +174,16 @@ private:
 	{ { -0.5f, 0.5f, 0.0f },{ 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
 	};
 
-	const std::vector<uint16_t> m_indices{ 0,1,2,2,3,0 };
+
+	const std::vector<uint16_t> m_indices{0, 1, 2, 2, 3, 0};
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
 #else
 	const bool enableValidationLayers = true;
 #endif
+
+	//application lifecycle
 
 	void initialize_window();
 	void initialize_vulkan();
@@ -177,60 +205,76 @@ private:
 	void create_framebuffers();
 	void create_command_pool();
 
+	//texturing
+
 	void create_texture_image();
 	void create_texture_image_view();
 	void create_texture_sampler();
 
+	//vertices
+
 	void create_vertex_buffer();
 	void create_index_buffer();
+
+	//descriptors
+
 	void create_uniform_buffer();
 	void create_descriptor_pool();
 	void create_descriptor_set();
+
+	//command buffers
+
 	void create_command_buffers();
 	void create_semaphores();
+
+	//update stuff
 
 	void draw_frame();
 	void update_uniform_buffer();
 
-	void recreate_swapchain();
+	//swapchain creation
 
+	void recreate_swapchain();
 	void clean_up_swapchain();
 
-	//Vulkan helper stuff thats not unvulkan enough to be declared just helper stuff
-	static void on_window_resized(GLFWwindow* window, int width, int height);
+	//window input reactions
 
-	//collects all required instance extensions in one vector for easy comparison later on
-	std::vector<const char*> get_required_instance_extensions();
+	static void on_window_resized(GLFWwindow *window, int width, int height);
 
-	//checks if the validation layers are supported
+	std::vector<const char *> get_required_instance_extensions();
+
+	//support checks
 	bool check_validation_layer_support();
-	//checks if the given required extensions are supported by the system
-	bool check_extension_support(std::vector<const char*> required_extensions, std::vector<VkExtensionProperties> supported_extensions);
-	bool check_instance_extension_support(std::vector<const char*> required_extensions);
+	bool check_extension_support(std::vector<const char *> required_extensions, std::vector<VkExtensionProperties> supported_extensions);
+	bool check_instance_extension_support(std::vector<const char *> required_extensions);
 	bool check_device_extension_support(VkPhysicalDevice physical_device);
-	//scores the physical devices of the system
+
+	//evaluations and selections
 	int evaluate_physical_device_capabilities(VkPhysicalDevice device);
 	QueueFamilyIndices find_queue_families(VkPhysicalDevice physical_device);
 	SwapChainSupportDetails query_swapchain_support(VkPhysicalDevice device);
 	VkSurfaceFormatKHR choose_swapchain_surface_format(const std::vector<VkSurfaceFormatKHR> &available_formats);
 	VkPresentModeKHR choose_swapchain_present_mode(const std::vector<VkPresentModeKHR> available_present_modes);
 	VkExtent2D choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &capabilities);
-	VkShaderModule create_shader_module(const std::vector<char> &code);
 	uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
+
+	//creation and transformation helpers
+	VkShaderModule create_shader_module(const std::vector<char> &code);
 	void transition_image_layout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
 	void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-
-	VkCommandBuffer begin_single_time_commands();
-	void end_single_time_commands(VkCommandBuffer command_buffer);
-
-	void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+	void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
 	void create_image(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &image_memory);
 	VkImageView create_image_view(VkImage image, VkFormat format);
 	void copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
+
+	//buffer recording helpers
+	VkCommandBuffer begin_single_time_commands();
+	void end_single_time_commands(VkCommandBuffer command_buffer);
+
 	//Debug stuff
-	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
-	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
-	void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
+	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char *layerPrefix, const char *msg, void *userData);
+	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback);
+	void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks *pAllocator);
 };
 
 #endif // !APPLICATION_HPP
