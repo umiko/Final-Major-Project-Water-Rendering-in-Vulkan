@@ -9,5 +9,5 @@ layout(location = 1) in vec2 fragment_texture_coordinate;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    outColor = texture(texture_sampler, fragment_texture_coordinate);
+    outColor = vec4(fragment_color, 1.0f); //texture(texture_sampler, fragment_texture_coordinate);
 }

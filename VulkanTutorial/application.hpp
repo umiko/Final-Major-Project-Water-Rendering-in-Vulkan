@@ -1,5 +1,4 @@
-#ifndef APPLICATION_HPP
-#define APPLICATION_HPP
+#pragma once
 
 #include <iostream>
 #include <stdexcept>
@@ -10,7 +9,6 @@
 #include <string_view>
 #include <map>
 #include <set>
-#include <algorithm>
 #include <array>
 #include <chrono>
 
@@ -25,7 +23,11 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 
+#include "logger.hpp"
+#include "vertex.hpp"
 #include "helper.hpp"
+#include "ocean.hpp"
+
 
 //Vulkan works with queues to which commands need to be submitted.
 //Some queues are more suitable than others or can only offer certain features.
@@ -53,43 +55,6 @@ struct SwapChainSupportDetails
 };
 
 //a vertex with position, color and texture coordinate
-struct Vertex
-{
-	glm::vec3 position;
-	glm::vec3 color;
-	glm::vec2 texcoord;
-
-	static VkVertexInputBindingDescription get_binding_description()
-	{
-		VkVertexInputBindingDescription vertex_input_binding_description = {};
-		vertex_input_binding_description.binding = 0;
-		vertex_input_binding_description.stride = sizeof(Vertex);
-		vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return vertex_input_binding_description;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 3> get_attribute_descriptions()
-	{
-		std::array<VkVertexInputAttributeDescription, 3> vertex_input_attribute_descriptions = {};
-		vertex_input_attribute_descriptions[0].binding = 0;
-		vertex_input_attribute_descriptions[0].location = 0;
-		vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		vertex_input_attribute_descriptions[0].offset = offsetof(Vertex, position);
-
-		vertex_input_attribute_descriptions[1].binding = 0;
-		vertex_input_attribute_descriptions[1].location = 1;
-		vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		vertex_input_attribute_descriptions[1].offset = offsetof(Vertex, color);
-
-		vertex_input_attribute_descriptions[2].binding = 0;
-		vertex_input_attribute_descriptions[2].location = 2;
-		vertex_input_attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		vertex_input_attribute_descriptions[2].offset = offsetof(Vertex, texcoord);
-
-		return vertex_input_attribute_descriptions;
-	}
-};
 
 //A uniform or constant buffer.
 //Used to get regularly changing data to the shader
@@ -111,6 +76,8 @@ class Application
 	const int HEIGHT = 600;
 	const char *WINDOW_TITLE = "Vulkan";
 	const char *APPLICATION_NAME = "Vulkan Playground";
+
+	Ocean* m_ocean;
 
 	GLFWwindow *m_window;
 
@@ -167,7 +134,7 @@ class Application
 
 	const std::vector<const char *> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-	const std::vector<Vertex> m_vertices = {
+	std::vector<Vertex> m_vertices = {
 		{ { -0.5f, -0.5f, 1.0f },{ 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
 	{ { 0.5f, -0.5f, 0.0f },{ 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f } },
 	{ { 0.5f, 0.5f, 0.0f },{ 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
@@ -175,7 +142,7 @@ class Application
 	};
 
 
-	const std::vector<uint16_t> m_indices{0, 1, 2, 2, 3, 0};
+	std::vector<uint32_t> m_indices{0, 1, 2, 2, 3, 0};
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
@@ -277,4 +244,3 @@ class Application
 	void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks *pAllocator);
 };
 
-#endif // !APPLICATION_HPP

@@ -38,6 +38,14 @@ int main()
 //Run the applications lifecycle
 void Application::run()
 {
+	info("setting up ocean");
+	Ocean* ocean = new Ocean(64,4.0f);
+	info("getting verts");
+	m_vertices = ocean->getVertices();
+	info("getting indices");
+	m_indices = ocean->getIndices();
+
+
 	initialize_window();
 	initialize_vulkan();
 	main_loop();
@@ -604,7 +612,7 @@ void Application::create_graphics_pipeline()
 	rasterization_state_create_info.depthClampEnable = VK_FALSE;
 	rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
 	//TODO: this is where you wireframe, REQUIRES A GPU FEATURE
-	rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_LINE;
 	rasterization_state_create_info.lineWidth = 1.0f;
 	rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
 	//has to be counter clockwise because of projection matrix y-flip
@@ -867,7 +875,7 @@ void Application::create_index_buffer()
 {
 	info("Creating Index Buffer...");
 	//determine size of buffer
-	VkDeviceSize buffer_size = sizeof(m_indices) * m_indices.size();
+	VkDeviceSize buffer_size = sizeof(m_indices[0]) * m_indices.size();
 
 	//create a staging buffer
 	VkBuffer staging_buffer;
@@ -1028,7 +1036,7 @@ void Application::create_command_buffers()
 
 		vkCmdBindVertexBuffers(m_command_buffers[i], 0, 1, vertex_buffers, offsets);
 
-		vkCmdBindIndexBuffer(m_command_buffers[i], m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindIndexBuffer(m_command_buffers[i], m_index_buffer, 0, VK_INDEX_TYPE_UINT32);
 
 		vkCmdDrawIndexed(m_command_buffers[i], static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
 
@@ -1132,7 +1140,7 @@ void Application::update_uniform_buffer()
 	float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
 
 	UniformBufferObject ubo = {};
-	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(3.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.projection = glm::perspective(glm::radians(45.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.0f);
 	//change y sign because glms clip coordinate is inverted, was designed for opengl, not vulkan after all

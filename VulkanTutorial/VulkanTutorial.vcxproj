@@ -21,9 +21,13 @@
   <ItemGroup>
     <ClInclude Include="application.hpp" />
     <ClInclude Include="helper.hpp" />
+    <ClInclude Include="logger.hpp" />
+    <ClInclude Include="ocean.hpp" />
+    <ClInclude Include="vertex.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="application.cpp" />
+    <ClCompile Include="ocean.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\compile.bat">

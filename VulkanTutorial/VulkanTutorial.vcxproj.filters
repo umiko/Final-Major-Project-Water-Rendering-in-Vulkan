@@ -24,9 +24,21 @@
     <ClInclude Include="helper.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ocean.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vertex.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="logger.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="application.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ocean.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
