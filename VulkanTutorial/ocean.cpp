@@ -59,7 +59,7 @@ void Ocean::initializeVertices(uint32_t resolution)
 			b = c;
 		}
 	}
-	info("fettig");
+	info("Set Up Ocean surface");
 }
 
 void Ocean::initializeHeightmap(uint32_t resolution)

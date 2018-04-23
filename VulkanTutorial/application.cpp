@@ -37,8 +37,7 @@ int main()
 
 //Run the applications lifecycle
 void Application::run()
-{
-	
+{	
 	initialize_ocean();
 	initialize_window();
 	initialize_vulkan();
@@ -49,7 +48,7 @@ void Application::run()
 //handles the generation of the ocean surface
 void Application::initialize_ocean()
 {
-	info("Please enter the resolution the plane should have:");
+	std::cout << "Please enter the resolution the plane should have:";
 
 	uint32_t res;
 	std::cin >> res;
@@ -137,10 +136,10 @@ void Application::create_instance()
 {
 	info("Creating Vulkan instance...");
 	//Check if debug mode is active and check if the validation layers are supported
-	if (enableValidationLayers && !check_validation_layer_support())
+	/*if (enableValidationLayers && !check_validation_layer_support())
 	{
 		throw std::runtime_error("Requested validation layers not available");
-	}
+	}*/
 
 	VkApplicationInfo application_info = {};
 	application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
