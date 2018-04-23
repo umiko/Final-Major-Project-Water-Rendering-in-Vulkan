@@ -151,6 +151,7 @@ class Application
 #endif
 
 	//application lifecycle
+	void initialize_ocean();
 
 	void initialize_window();
 	void initialize_vulkan();

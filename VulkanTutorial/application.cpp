@@ -38,18 +38,36 @@ int main()
 //Run the applications lifecycle
 void Application::run()
 {
-	info("setting up ocean");
-	Ocean* ocean = new Ocean(64,4.0f);
-	info("getting verts");
-	m_vertices = ocean->getVertices();
-	info("getting indices");
-	m_indices = ocean->getIndices();
-
-
+	
+	initialize_ocean();
 	initialize_window();
 	initialize_vulkan();
 	main_loop();
 	clean_up();
+}
+
+//handles the generation of the ocean surface
+void Application::initialize_ocean()
+{
+	info("Please enter the resolution the plane should have:");
+
+	uint32_t res;
+	std::cin >> res;
+	if (res <= 1) {
+		throw std::runtime_error("Number is unfit for grid creation");
+	}
+	else if (res >= 2048) {
+		warn("This will take ages to generate, are you sure you wanna try?[Y/N]");
+		char c;
+		std::cin >> c;
+		if (c != 'Y') {
+			info("Probably the right choice");
+			throw std::runtime_error("User aborted execution");
+		}
+	}
+	m_ocean = new Ocean(res, 4.0f);
+	m_vertices = m_ocean->getVertices();
+	m_indices = m_ocean->getIndices();
 }
 
 //get a window going using glfw
