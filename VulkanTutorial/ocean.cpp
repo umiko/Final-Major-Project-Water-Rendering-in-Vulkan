@@ -94,3 +94,9 @@ std::vector<float> Ocean::getHeightmap()
 {
 	return m_heightmap;
 }
+
+void Ocean::update_waves(){
+	for(Gerstner wave : m_waves){
+		wave.update(); //or something, let future me worry about it
+	}
+}

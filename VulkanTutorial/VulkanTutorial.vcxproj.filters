@@ -33,9 +33,6 @@
     <ClInclude Include="logger.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="mathhelper.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="gerstner_waves.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
