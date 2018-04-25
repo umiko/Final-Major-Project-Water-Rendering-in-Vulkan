@@ -77,6 +77,8 @@ class Application
 	const char *WINDOW_TITLE = "Vulkan";
 	const char *APPLICATION_NAME = "Vulkan Playground";
 
+	bool m_enable_wireframe = true;
+
 	Ocean* m_ocean;
 
 	GLFWwindow *m_window;
@@ -151,7 +153,7 @@ class Application
 #endif
 
 	//application lifecycle
-	void initialize_ocean();
+	void configure_application();
 
 	void initialize_window();
 	void initialize_vulkan();

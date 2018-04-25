@@ -20,13 +20,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="application.hpp" />
+    <ClInclude Include="gerstner_waves.hpp" />
     <ClInclude Include="helper.hpp" />
     <ClInclude Include="logger.hpp" />
+    <ClInclude Include="mathhelper.hpp" />
     <ClInclude Include="ocean.hpp" />
     <ClInclude Include="vertex.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="application.cpp" />
+    <ClCompile Include="gerstner_waves.cpp" />
     <ClCompile Include="ocean.cpp" />
   </ItemGroup>
   <ItemGroup>

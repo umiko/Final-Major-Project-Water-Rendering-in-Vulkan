@@ -11,12 +11,15 @@ class Ocean
 {
 	float tile_size;
 
+	static enum WaveType { Gerstner, FFT };
+
+
+
 	std::vector<Vertex> m_vertices = {};
 	std::vector<uint32_t> m_indices = {};
-	std::vector<float> m_heightmap = {};
 
 	void initializeVertices(uint32_t resolution);
-	void initializeHeightmap(uint32_t resolution);
+	void initializeWave(uint32_t resolution);
 
 
 public:

@@ -38,7 +38,7 @@ int main()
 //Run the applications lifecycle
 void Application::run()
 {	
-	initialize_ocean();
+	configure_application();
 	initialize_window();
 	initialize_vulkan();
 	main_loop();
@@ -46,27 +46,41 @@ void Application::run()
 }
 
 //handles the generation of the ocean surface
-void Application::initialize_ocean()
+void Application::configure_application()
 {
-	std::cout << "Please enter the resolution the plane should have:";
-
-	uint32_t res;
-	std::cin >> res;
-	if (res <= 1) {
+	uint32_t ocean_resolution = 64;
+	//dont want a dialog every time i need to debug something
+#ifndef _DEBUG
+	std::cout << "Please enter the resolution the plane should have(Power of 2):";
+	std::cin >> ocean_resolution;
+	if (ocean_resolution <= 1) {
 		throw std::runtime_error("Number is unfit for grid creation");
 	}
-	else if (res >= 2048) {
-		warn("This will take ages to generate, are you sure you wanna try?[Y/N]");
+	else if (ocean_resolution >= 2048) {
+		std::cout << "This will take ages to generate, are you sure you wanna try?[Y/N]";
 		char c;
 		std::cin >> c;
-		if (c != 'Y') {
+		if (tolower(c) != 'y') {
 			info("Probably the right choice");
 			throw std::runtime_error("User aborted execution");
 		}
 	}
-	m_ocean = new Ocean(res, 4.0f);
+#endif // !_DEBUG
+
+	m_ocean = new Ocean(ocean_resolution, 4.0f);
 	m_vertices = m_ocean->getVertices();
 	m_indices = m_ocean->getIndices();
+
+	//
+#ifndef _DEBUG
+	std::cout << "Would you like to display the wave as wireframe?[Y/N]" << std::endl;
+	char c;
+	std::cin >> c;
+	if (tolower(c) != 'y') {
+		m_enable_wireframe = false;
+	}
+#endif // !_DEBUG
+
 }
 
 //get a window going using glfw
@@ -136,10 +150,10 @@ void Application::create_instance()
 {
 	info("Creating Vulkan instance...");
 	//Check if debug mode is active and check if the validation layers are supported
-	/*if (enableValidationLayers && !check_validation_layer_support())
+	if (enableValidationLayers && !check_validation_layer_support())
 	{
 		throw std::runtime_error("Requested validation layers not available");
-	}*/
+	}
 
 	VkApplicationInfo application_info = {};
 	application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -629,7 +643,7 @@ void Application::create_graphics_pipeline()
 	rasterization_state_create_info.depthClampEnable = VK_FALSE;
 	rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
 	//TODO: this is where you wireframe, REQUIRES A GPU FEATURE
-	rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_LINE;
+	rasterization_state_create_info.polygonMode = (m_enable_wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL);
 	rasterization_state_create_info.lineWidth = 1.0f;
 	rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
 	//has to be counter clockwise because of projection matrix y-flip

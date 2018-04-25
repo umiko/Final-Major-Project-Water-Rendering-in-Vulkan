@@ -62,8 +62,9 @@ void Ocean::initializeVertices(uint32_t resolution)
 	info("Set Up Ocean surface");
 }
 
-void Ocean::initializeHeightmap(uint32_t resolution)
+void Ocean::initializeWave(uint32_t resolution)
 {
+	if
 }
 
 Ocean::Ocean(uint32_t resolution, float tilesize)
