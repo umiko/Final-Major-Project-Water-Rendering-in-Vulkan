@@ -64,7 +64,7 @@ void Ocean::initializeVertices(uint32_t resolution)
 
 void Ocean::initializeWave(uint32_t resolution)
 {
-	if
+
 }
 
 Ocean::Ocean(uint32_t resolution, float tilesize)
@@ -76,7 +76,7 @@ Ocean::Ocean(uint32_t resolution, float tilesize)
 
 	tile_size = tilesize;
 	initializeVertices(resolution);
-	initializeHeightmap(resolution);
+	initializeWave(resolution);
 	succ("Ocean successfully initialized");
 }
 
@@ -90,13 +90,17 @@ std::vector<uint32_t> Ocean::getIndices()
 	return m_indices;
 }
 
-std::vector<float> Ocean::getHeightmap()
+std::vector<glm::vec3> Ocean::getHeightmap()
 {
-	return m_heightmap;
+	return m_dispersion;
 }
 
-void Ocean::update_waves(){
+void Ocean::update_waves(float time){
+	m_dispersion.clear();
+	if (m_dispersion.size() != m_vertices.size()) {
+		m_dispersion.resize(m_vertices.size());
+	}
 	for(Gerstner wave : m_waves){
-		wave.update(); //or something, let future me worry about it
+		wave.apply_wave(m_dispersion, time); //or something, let future me worry about it
 	}
 }
