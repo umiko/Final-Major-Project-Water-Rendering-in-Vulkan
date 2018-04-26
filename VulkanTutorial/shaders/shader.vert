@@ -11,8 +11,8 @@ layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec3 in_color;
 layout(location = 2) in vec2 in_tex_coord;
 
-layout(location = 0) out vec3 fragment_color;
-layout(location = 1) out vec2 fragment_tex_coord;
+layout(location = 0) out vec3 out_color;
+layout(location = 1) out vec2 out_texture_coord;
 
 
 
@@ -23,6 +23,6 @@ out gl_PerVertex {
 
 void main() {
     gl_Position = ubo.projection * ubo.view * ubo.model * vec4(in_position, 1.0);
-    fragment_color = in_color;
-    fragment_tex_coord = in_tex_coord;
+    out_color = in_color;
+    out_texture_coord = in_tex_coord;
 }

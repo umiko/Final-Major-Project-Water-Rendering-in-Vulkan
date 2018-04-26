@@ -39,6 +39,6 @@ class Gerstner {
 
 public:
 	//Applies this wave on top of a wavemap
-	std::vector<glm::vec3> apply_wave(std::vector<glm::vec3> &current_waves, float time);
+	void apply_wave(std::vector<glm::vec3> &current_waves, float time);
 	
 };

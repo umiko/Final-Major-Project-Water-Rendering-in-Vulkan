@@ -367,6 +367,8 @@ void Application::create_logical_device()
 	device_features.fillModeNonSolid = VK_TRUE;
 	//also enable texture sampling
 	device_features.samplerAnisotropy = VK_TRUE;
+	//geometry shader
+	device_features.geometryShader = VK_TRUE;
 
 	//fill in the struct so the creation function knows what is needed
 	VkDeviceCreateInfo logical_device_create_info = {};
@@ -576,12 +578,15 @@ void Application::create_graphics_pipeline()
 
 	//setting up shader modules
 	std::vector<char> vert_shader_code = read_file("shaders/vert.spv");
+	std::vector<char> geom_shader_code = read_file("shaders/geom.spv");
 	std::vector<char> frag_shader_code = read_file("shaders/frag.spv");
 
 	VkShaderModule vert_shader_module;
+	VkShaderModule geom_shader_module;
 	VkShaderModule frag_shader_module;
 
 	vert_shader_module = create_shader_module(vert_shader_code);
+	geom_shader_module = create_shader_module(geom_shader_code);
 	frag_shader_module = create_shader_module(frag_shader_code);
 
 	//create vertex shader stage
@@ -591,6 +596,13 @@ void Application::create_graphics_pipeline()
 	vert_shader_stage_info.module = vert_shader_module;
 	vert_shader_stage_info.pName = "main";
 
+	//create geometry shader stage
+	VkPipelineShaderStageCreateInfo geom_shader_stage_info = {};
+	geom_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	geom_shader_stage_info.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+	geom_shader_stage_info.module = geom_shader_module;
+	geom_shader_stage_info.pName = "main";
+
 	//create fragment shader stage
 	VkPipelineShaderStageCreateInfo frag_shader_stage_info = {};
 	frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -598,7 +610,7 @@ void Application::create_graphics_pipeline()
 	frag_shader_stage_info.module = frag_shader_module;
 	frag_shader_stage_info.pName = "main";
 
-	VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
+	VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, geom_shader_stage_info, frag_shader_stage_info};
 
 	//set up vertex input
 	auto vertex_binding_descriptions = Vertex::get_binding_description();
@@ -654,6 +666,7 @@ void Application::create_graphics_pipeline()
 	rasterization_state_create_info.depthBiasSlopeFactor = 0.0f;	// Optional
 
 	//TODO:Depth stencil goes here
+	
 
 	//configure multisampling for anti-aliasing
 	VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {};
@@ -713,7 +726,7 @@ void Application::create_graphics_pipeline()
 	//put it all together and create the graphics pipeline
 	VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {};
 	graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	graphics_pipeline_create_info.stageCount = 2;
+	graphics_pipeline_create_info.stageCount = 3;
 	graphics_pipeline_create_info.pStages = shader_stages;
 	graphics_pipeline_create_info.pVertexInputState = &vertex_input_create_info;
 	graphics_pipeline_create_info.pInputAssemblyState = &input_assembly_state_create_info;
@@ -740,6 +753,7 @@ void Application::create_graphics_pipeline()
 
 	//destroy the shader modules, they are in the pipeline now and no longer needed here
 	vkDestroyShaderModule(m_logical_device, frag_shader_module, nullptr);
+	vkDestroyShaderModule(m_logical_device, geom_shader_module, nullptr);
 	vkDestroyShaderModule(m_logical_device, vert_shader_module, nullptr);
 
 	succ("Created graphics pipeline");
