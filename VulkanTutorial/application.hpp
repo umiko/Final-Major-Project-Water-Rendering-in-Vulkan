@@ -27,9 +27,11 @@
 #include "vertex.hpp"
 #include "helper.hpp"
 #include "ocean.hpp"
+#include "displacement.hpp"
 
 
 //Vulkan works with queues to which commands need to be submitted.
+//commands can be recorded, stored and are executed when submitted to a queue.
 //Some queues are more suitable than others or can only offer certain features.
 //Therefore we need to make sure that we know which queues support the desired functionality.
 //This struct enables us to save the optimal queue indices and check if all needed queues are found.
@@ -112,6 +114,10 @@ class Application
 	VkDeviceMemory m_vertex_buffer_memory;
 	VkBuffer m_index_buffer;
 	VkDeviceMemory m_index_buffer_memory;
+
+	VkBuffer m_displacement_buffer;
+	VkDeviceMemory m_displacement_memory;
+
 	VkBuffer m_uniform_buffer;
 	VkDeviceMemory m_uniform_buffer_memory;
 	VkDescriptorPool m_descriptor_pool;
@@ -143,8 +149,9 @@ class Application
 	{ { -0.5f, 0.5f, 0.0f },{ 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
 	};
 
-
 	std::vector<uint32_t> m_indices{0, 1, 2, 2, 3, 0};
+
+	std::vector<Displacement> m_displacements = {};
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
@@ -186,6 +193,8 @@ class Application
 	void create_vertex_buffer();
 	void create_index_buffer();
 
+	void create_displacement_buffer();
+
 	//descriptors
 
 	void create_uniform_buffer();
@@ -200,7 +209,7 @@ class Application
 	//update stuff
 
 	void draw_frame();
-	void update_uniform_buffer();
+	void update_buffers();
 
 	//swapchain creation
 
@@ -246,4 +255,3 @@ class Application
 	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback);
 	void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks *pAllocator);
 };
-

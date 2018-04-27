@@ -69,6 +69,10 @@ void Application::configure_application()
 
 	m_ocean = new Ocean(ocean_resolution, 4.0f);
 	m_vertices = m_ocean->getVertices();
+	//TODO: generate first displacement map here
+	for (Vertex vert : m_vertices) {
+		m_displacements.push_back({ { (float)rand() / (float)RAND_MAX, rand() / (float)RAND_MAX, (float)rand() / RAND_MAX } });
+	}
 	m_indices = m_ocean->getIndices();
 
 	//
@@ -122,6 +126,9 @@ void Application::initialize_vulkan()
 
 	create_vertex_buffer();
 	create_index_buffer();
+
+	create_displacement_buffer();
+
 	create_uniform_buffer();
 	create_descriptor_pool();
 	create_descriptor_set();
@@ -136,9 +143,12 @@ void Application::main_loop()
 	while (!glfwWindowShouldClose(m_window))
 	{
 		glfwPollEvents();
-		update_uniform_buffer();
 		//TODO: update goes here
+
+		update_buffers();
 		draw_frame();
+		//wait until everything is done
+		vkQueueWaitIdle(m_presentation_queue);
 	}
 	vkDeviceWaitIdle(m_logical_device);
 }
@@ -616,13 +626,25 @@ void Application::create_graphics_pipeline()
 	auto vertex_binding_descriptions = Vertex::get_binding_description();
 	auto vertex_attribute_descriptions = Vertex::get_attribute_descriptions();
 
+	auto displacement_binding_descriptions = Displacement::get_binding_description();
+	auto displacement_attribute_descriptions = Displacement::get_attribute_descriptions();
+
+	std::vector<VkVertexInputBindingDescription> input_binding_descriptions = { vertex_binding_descriptions, displacement_binding_descriptions };
+	std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions = {};
+	input_attribute_descriptions.push_back(vertex_attribute_descriptions[0]);
+	input_attribute_descriptions.push_back(vertex_attribute_descriptions[1]);
+	input_attribute_descriptions.push_back(vertex_attribute_descriptions[2]);
+	input_attribute_descriptions.push_back(displacement_attribute_descriptions[0]);
+
+
+
 	VkPipelineVertexInputStateCreateInfo vertex_input_create_info = {};
 	vertex_input_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertex_input_create_info.vertexBindingDescriptionCount = 1;
-	vertex_input_create_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attribute_descriptions.size());
+	vertex_input_create_info.vertexBindingDescriptionCount = 2;
+	vertex_input_create_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attribute_descriptions.size()+displacement_attribute_descriptions.size());
 
-	vertex_input_create_info.pVertexBindingDescriptions = &vertex_binding_descriptions;
-	vertex_input_create_info.pVertexAttributeDescriptions = vertex_attribute_descriptions.data();
+	vertex_input_create_info.pVertexBindingDescriptions = input_binding_descriptions.data();
+	vertex_input_create_info.pVertexAttributeDescriptions = input_attribute_descriptions.data();
 
 	VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {};
 	input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -946,6 +968,15 @@ void Application::create_index_buffer()
 	succ("Index Buffer created");
 }
 
+void Application::create_displacement_buffer()
+{
+	//every vertex needs a displacement
+	VkDeviceSize buffer_size = sizeof(Displacement) * m_vertices.size();
+
+	create_buffer(buffer_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_displacement_buffer, m_displacement_memory);
+
+}
+
 //create the uniform buffer
 void Application::create_uniform_buffer()
 {
@@ -1076,10 +1107,12 @@ void Application::create_command_buffers()
 
 		vkCmdBindPipeline(m_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
 
-		VkBuffer vertex_buffers[] = {m_vertex_buffer};
+		VkBuffer vertex_buffers[] = { m_vertex_buffer };
+		VkBuffer displacement_buffers[] = {m_displacement_buffer};
 		VkDeviceSize offsets[] = {0};
 
 		vkCmdBindVertexBuffers(m_command_buffers[i], 0, 1, vertex_buffers, offsets);
+		vkCmdBindVertexBuffers(m_command_buffers[i], 1, 1, displacement_buffers, offsets);
 
 		vkCmdBindIndexBuffer(m_command_buffers[i], m_index_buffer, 0, VK_INDEX_TYPE_UINT32);
 
@@ -1173,12 +1206,11 @@ void Application::draw_frame()
 		throw std::runtime_error("Failed to present swapchain image");
 	}
 
-	//wait until everything is done
-	vkQueueWaitIdle(m_presentation_queue);
+	
 }
 
 //update uniform buffer objects with fresh values
-void Application::update_uniform_buffer()
+void Application::update_buffers()
 {
 	static auto start_time = std::chrono::high_resolution_clock::now();
 	auto current_time = std::chrono::high_resolution_clock::now();
@@ -1195,6 +1227,12 @@ void Application::update_uniform_buffer()
 	vkMapMemory(m_logical_device, m_uniform_buffer_memory, 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));
 	vkUnmapMemory(m_logical_device, m_uniform_buffer_memory);
+
+	void *displacement_data;
+	VkDeviceSize buffer_size = sizeof(Displacement)*m_displacements.size();
+	vkMapMemory(m_logical_device, m_displacement_memory, 0, buffer_size, 0, &displacement_data);
+	memcpy(displacement_data, m_displacements.data(), (size_t)buffer_size);
+	vkUnmapMemory(m_logical_device, m_displacement_memory);
 }
 
 //recreates the swapchain, for example in the event the current one is not suitable anymore
@@ -1832,6 +1870,9 @@ void Application::clean_up()
 	vkDestroyDescriptorSetLayout(m_logical_device, m_descriptor_set_layout, nullptr);
 	vkDestroyBuffer(m_logical_device, m_uniform_buffer, nullptr);
 	vkFreeMemory(m_logical_device, m_uniform_buffer_memory, nullptr);
+
+	vkDestroyBuffer(m_logical_device, m_displacement_buffer, nullptr);
+	vkFreeMemory(m_logical_device, m_displacement_memory, nullptr);
 
 	vkDestroyBuffer(m_logical_device, m_index_buffer, nullptr);
 	vkFreeMemory(m_logical_device, m_index_buffer_memory, nullptr);

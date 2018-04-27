@@ -19,7 +19,6 @@ glm::vec2 Gerstner::get_x() {
 }
 
 //Applies this wave on top of a wavemap
-
 void Gerstner::apply_wave(std::vector<glm::vec3>& current_waves, float time) {
 	this->time = time;
 

@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="application.hpp" />
+    <ClInclude Include="displacement.hpp" />
     <ClInclude Include="gerstner_waves.hpp" />
     <ClInclude Include="helper.hpp" />
     <ClInclude Include="logger.hpp" />
