@@ -144,9 +144,9 @@ void Application::main_loop()
 	{
 		glfwPollEvents();
 		//TODO: update goes here
-
 		update_buffers();
 		draw_frame();
+		m_displacements = m_ocean->update_waves(m_time);
 		//wait until everything is done
 		vkQueueWaitIdle(m_presentation_queue);
 	}
@@ -1214,17 +1214,13 @@ void Application::update_buffers()
 {
 	static auto start_time = std::chrono::high_resolution_clock::now();
 	auto current_time = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
-
+	m_time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
 	UniformBufferObject ubo = {};
-	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(3.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.model = glm::rotate(glm::mat4(1.0f), m_time * glm::radians(3.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.projection = glm::perspective(glm::radians(45.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.0f);
 	//change y sign because glms clip coordinate is inverted, was designed for opengl, not vulkan after all
 	ubo.projection[1][1] *= -1;
-
-	//TODO: change this line to run after draw but before wait for idle;
-	m_displacements = m_ocean->update_waves(time);
 
 	void *data;
 	vkMapMemory(m_logical_device, m_uniform_buffer_memory, 0, sizeof(ubo), 0, &data);

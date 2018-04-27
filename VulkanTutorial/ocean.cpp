@@ -65,7 +65,9 @@ void Ocean::initializeVertices(uint32_t resolution)
 void Ocean::initializeWave(uint32_t resolution)
 {
 
-	m_waves.push_back(Gerstner(glm::vec2(1.0f, 0.0f), 1.0f, 1.0f));
+	m_waves.push_back(Gerstner(glm::vec2(1.0f, 0.0f), 1.0f, 2.0f, 0.5f));
+	m_waves.push_back(Gerstner(glm::vec2(0.0f, 1.0f), 1.0f, 2.0f, 0.5f));
+
 }
 
 Ocean::Ocean(uint32_t resolution, float tilesize)

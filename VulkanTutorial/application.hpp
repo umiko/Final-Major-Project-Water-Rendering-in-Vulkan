@@ -81,6 +81,8 @@ class Application
 
 	bool m_enable_wireframe = true;
 
+	float m_time=0;
+
 	Ocean* m_ocean;
 
 	GLFWwindow *m_window;
