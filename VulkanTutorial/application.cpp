@@ -1223,6 +1223,9 @@ void Application::update_buffers()
 	//change y sign because glms clip coordinate is inverted, was designed for opengl, not vulkan after all
 	ubo.projection[1][1] *= -1;
 
+	//TODO: change this line to run after draw but before wait for idle;
+	m_displacements = m_ocean->update_waves(time);
+
 	void *data;
 	vkMapMemory(m_logical_device, m_uniform_buffer_memory, 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));

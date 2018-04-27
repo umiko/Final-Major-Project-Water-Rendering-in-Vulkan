@@ -65,6 +65,7 @@ void Ocean::initializeVertices(uint32_t resolution)
 void Ocean::initializeWave(uint32_t resolution)
 {
 
+	m_waves.push_back(Gerstner(glm::vec2(1.0f, 0.0f), 1.0f, 1.0f));
 }
 
 Ocean::Ocean(uint32_t resolution, float tilesize)
@@ -73,7 +74,7 @@ Ocean::Ocean(uint32_t resolution, float tilesize)
 	if (resolution > 64) {
 		warn("WARNING: Entering resolutions higher than 128 might become very demanding and will require considerable time to generate the ocean surface and indices.");
 	}
-
+	this->resolution = resolution;
 	tile_size = tilesize;
 	initializeVertices(resolution);
 	initializeWave(resolution);
@@ -90,17 +91,18 @@ std::vector<uint32_t> Ocean::getIndices()
 	return m_indices;
 }
 
-std::vector<glm::vec3> Ocean::getHeightmap()
-{
-	return m_dispersion;
-}
+//std::vector<glm::vec3> Ocean::getHeightmap()
+//{
+//}
 
-void Ocean::update_waves(float time){
-	m_dispersion.clear();
-	if (m_dispersion.size() != m_vertices.size()) {
-		m_dispersion.resize(m_vertices.size());
+std::vector<Displacement> Ocean::update_waves(float time){
+	std::vector<Displacement> current_displacement = {};
+
+	if (current_displacement.size() != m_vertices.size()) {
+		current_displacement.resize(m_vertices.size());
 	}
-	for(Gerstner wave : m_waves){
-		wave.apply_wave(m_dispersion, time); //or something, let future me worry about it
+	for (Gerstner wave : m_waves) {
+		current_displacement = wave.apply_wave(current_displacement, resolution, tile_size, time);
 	}
+	return current_displacement;
 }
