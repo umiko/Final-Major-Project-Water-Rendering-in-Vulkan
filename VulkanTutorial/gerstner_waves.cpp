@@ -3,29 +3,42 @@
 
 float Gerstner::get_phase_constant()
 {
-	return speed * 2 * PI / lambda;
+	return speed * 2 / lambda;
 }
 
+//"Choppiness" of the wave
 float Gerstner::get_Q()
 {
-	return 1 / (get_w()*A);
+	return 0.4f;
 }
 
+//Tessendorf calls it K, everyone else w, its a bit confusing
 float Gerstner::get_w() {
-	return sqrtf(g * get_K());
+	//return sqrtf((g * get_K()));
+	return get_K();
 }
 
 float Gerstner::get_K() {
 	return 2 * PI / lambda;
 }
 
-glm::vec3 Gerstner::get_displacement(glm::vec2 x0)
+glm::vec3 Gerstner::get_displacement(glm::vec2 x0, glm::vec3 displacement)
 {
-	float x = x0.x + (get_Q()*A*k.x*cosf(get_w()*glm::dot(k, x0) + get_phase_constant()*time));
-	float y = x0.y + (get_Q()*A*k.y*cosf(get_w()*glm::dot(k, x0) + get_phase_constant()*time));
-	float z = A*sinf(get_w()*glm::dot(k, x0)+get_phase_constant()*time);
+	float x = displacement.x + (get_Q()*A*k.x*cosf(get_w()*glm::dot(k, x0) + get_phase_constant()*time));
+	float y = displacement.y + (get_Q()*A*k.y*cosf(get_w()*glm::dot(k, x0) + get_phase_constant()*time));
+	float z = displacement.z + A*sinf(get_w()*glm::dot(k, x0)+get_phase_constant()*time);
 
-	return glm::vec3(x,y,z);
+	/*float x = (get_Q()*A*k.x * cosf(get_w()*glm::dot(k, x0) + get_phase_constant()*time));
+	float y = (get_Q()*A*k.y * cosf(get_w()*glm::dot(k, x0) + get_phase_constant()*time));
+	float z = A * sinf(get_w()*glm::dot(k, x0) + get_phase_constant()*time);*/
+
+	/*float x = ((k.x/get_K())*A*k.x * cosf(get_w()*glm::dot(k, x0) -get_w() * time + get_phase_constant()));
+	float y = ((k.x / get_K())*A*k.y * cosf(get_w()*glm::dot(k, x0) - get_w() * time + get_phase_constant()));
+	float z = A * sinf(get_w()*glm::dot(k, x0) + get_phase_constant()*time);*/
+
+	return glm::vec3(x, y, z);
+
+	//return displacement;
 }
 
 Gerstner::Gerstner(glm::vec2 wave_direction, float amplitude, float wavelength, float speed)
@@ -48,9 +61,11 @@ std::vector<Displacement> Gerstner::apply_wave(std::vector<Displacement> current
 	glm::vec2 x0;
 
 	for (int i = 0; i < size; i++) {
+		//get undisturbed vertex position 
 		x0 = glm::vec2(i%resolution, floorf(i / resolution));
-		glm::vec3 displacement = get_displacement(x0);
-		new_displacement[i] = { current_displacement[i].displacement+displacement*step };
+		glm::vec3 displacement = get_displacement(x0, current_displacement[i].displacement);
+		//new_displacement[i] = { current_displacement[i].displacement + displacement * step };
+		new_displacement[i] = { displacement };
 	}
 	return new_displacement;
 }

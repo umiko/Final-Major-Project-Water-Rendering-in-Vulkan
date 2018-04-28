@@ -11,7 +11,6 @@
 class Ocean
 {
 	float tile_size;
-	uint32_t resolution;
 	static enum WaveType { GerstnerWaves, FFT };
 
 	std::vector<Gerstner> m_waves;
@@ -23,7 +22,9 @@ class Ocean
 
 
 public:
-	Ocean(uint32_t resolution = 1024, float tilesize = 3.0f);
+	uint32_t resolution;
+
+	Ocean(uint32_t resolution = 1024, float tilesize = 256);
 	std::vector<Vertex> getVertices();
 	std::vector<uint32_t> getIndices();
 	//std::vector<glm::vec3> getHeightmap();

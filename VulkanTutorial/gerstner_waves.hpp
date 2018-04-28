@@ -35,7 +35,7 @@ private:
 	//K=2PI/wavelength
 	float get_K();
 
-	glm::vec3 get_displacement(glm::vec2 x0);
+	glm::vec3 get_displacement(glm::vec2 x0, glm::vec3 displacement);
 
 public:
 	Gerstner(glm::vec2 wave_direction, float amplitude, float wavelength, float speed);

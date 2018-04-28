@@ -48,15 +48,14 @@ void Application::run()
 //handles the generation of the ocean surface
 void Application::configure_application()
 {
-	uint32_t ocean_resolution = 64;
 	//dont want a dialog every time i need to debug something
 #ifndef _DEBUG
 	std::cout << "Please enter the resolution the plane should have(Power of 2):";
-	std::cin >> ocean_resolution;
-	if (ocean_resolution <= 1) {
+	std::cin >> m_ocean_resolution;
+	if (m_ocean_resolution <= 1) {
 		throw std::runtime_error("Number is unfit for grid creation");
 	}
-	else if (ocean_resolution >= 2048) {
+	else if (m_ocean_resolution >= 2048) {
 		std::cout << "This will take ages to generate, are you sure you wanna try?[Y/N]";
 		char c;
 		std::cin >> c;
@@ -67,7 +66,7 @@ void Application::configure_application()
 	}
 #endif // !_DEBUG
 
-	m_ocean = new Ocean(ocean_resolution, 4.0f);
+	m_ocean = new Ocean(m_ocean_resolution, m_ocean_resolution);
 	m_vertices = m_ocean->getVertices();
 	//TODO: generate first displacement map here
 	for (Vertex vert : m_vertices) {
@@ -1216,9 +1215,9 @@ void Application::update_buffers()
 	auto current_time = std::chrono::high_resolution_clock::now();
 	m_time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
 	UniformBufferObject ubo = {};
-	ubo.model = glm::rotate(glm::mat4(1.0f), m_time * glm::radians(3.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.projection = glm::perspective(glm::radians(45.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.0f);
+	ubo.model = glm::mat4(1.0f);//glm::rotate(glm::mat4(1.0f), m_time * glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::vec3(m_ocean_resolution*0.75, m_ocean_resolution*0.75, m_ocean_resolution*0.5), glm::vec3(0.0f, 0.0f, m_ocean_resolution*-0.25f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.projection = glm::perspective(glm::radians(45.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10000.0f);
 	//change y sign because glms clip coordinate is inverted, was designed for opengl, not vulkan after all
 	ubo.projection[1][1] *= -1;
 
