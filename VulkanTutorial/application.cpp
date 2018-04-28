@@ -630,13 +630,13 @@ void Application::create_graphics_pipeline()
 
 	std::vector<VkVertexInputBindingDescription> input_binding_descriptions = { vertex_binding_descriptions, displacement_binding_descriptions };
 	std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions = {};
+	//manually push attribute descriptions as they have different sizes, which vectors dont particularly like
 	input_attribute_descriptions.push_back(vertex_attribute_descriptions[0]);
 	input_attribute_descriptions.push_back(vertex_attribute_descriptions[1]);
 	input_attribute_descriptions.push_back(vertex_attribute_descriptions[2]);
 	input_attribute_descriptions.push_back(displacement_attribute_descriptions[0]);
 
-
-
+	//Describe the vertex input
 	VkPipelineVertexInputStateCreateInfo vertex_input_create_info = {};
 	vertex_input_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertex_input_create_info.vertexBindingDescriptionCount = 2;

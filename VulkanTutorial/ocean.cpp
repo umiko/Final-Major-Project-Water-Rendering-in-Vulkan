@@ -18,7 +18,7 @@ void Ocean::initializeVertices(uint32_t resolution)
 		if (column % resolution == 0 && column != 0)
 			row++;
 
-		m_vertices[column] = { {-0.5* tile_size + column % resolution * step, -0.5* tile_size + row * step, 0.0f}, {0.0f, 1.0f, 0.0f}, {texStep * column, texStep * row} };
+		m_vertices[column] = { {-0.5* tile_size + column % resolution * step, -0.5* tile_size + row * step, 0.0f}, {0.0f, .56f, 0.58f}, {texStep * column, texStep * row} };
 
 	}
 
