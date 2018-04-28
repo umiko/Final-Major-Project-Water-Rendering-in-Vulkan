@@ -62,22 +62,27 @@ void Ocean::initializeVertices(uint32_t resolution)
 	info("Set Up Ocean surface");
 }
 
+//adds new gerstner waves to the ocean
 void Ocean::initializeWave(uint32_t resolution)
 {
 
-	m_waves.push_back(Gerstner(glm::vec2(1.0f, 0.0f), 5.0f, 64.0f, 128.0f));	
-	//m_waves.push_back(Gerstner(glm::vec2(-0.50f, 3.0f), 0.50f, 0.10f, 0.4f));
+	//m_waves.push_back(Gerstner(glm::vec2(1.0f, 0.7f), 3.0f, 80.0f, 20.0f));	
+	m_waves.push_back(Gerstner(glm::vec2(-0.50f, 3.0f), 1.20f, 32.0f, 40.4f));
+	//m_waves.push_back(Gerstner(glm::vec2(-2.0f, -3.0f), 1.30f, 120.0f, 30.4f));
+	m_waves.push_back(Gerstner(glm::vec2(2.0f, -4.0f), 1.40f, 26.0f, 15.4f));
+	//m_waves.push_back(Gerstner(glm::vec2(2.0f, 4.0f), 1.50f, 200.0f, 10.4f));
+	m_waves.push_back(Gerstner(glm::vec2(2.0f, 7.0f), 1.0f, 30.0f, 17.8f));
+	m_waves.push_back(Gerstner(glm::vec2(-3.0f, 4.0f), 1.820f, 160.0f, 18.3f));
+	m_waves.push_back(Gerstner(glm::vec2(56.0f, -34.0f), 1.670f, 34.0f, 21.1f));
 
-	//m_waves.push_back(Gerstner(glm::vec2(1.0f, -3.5f), .120f, 1500.0f, 21.7f));
-	//m_waves.push_back(Gerstner(glm::vec2(1.0f, 2.3f), .080f, 1000.0f, 35.55f));
-	/*m_waves.push_back(Gerstner(glm::vec2(-5.0f, 1.0f), 0.240f, 1.50f, 1.5f));
-	m_waves.push_back(Gerstner(glm::vec2(3.0f, -1.0f), 0.430f, 2.0f, 0.7f));*/
-	//m_waves.push_back(Gerstner(glm::vec2(2.0f, 7.0f), 1.270f, 3.0f, 1.8f));
-	//m_waves.push_back(Gerstner(glm::vec2(-3.0f, 4.0f), 0.820f, 6.0f, 1.3f));
-	//m_waves.push_back(Gerstner(glm::vec2(56.0f, -34.0f), 1.670f, 4.0f, 1.1f));
+	//random waves look bad
 
+	//for (uint32_t i = 0; i < 5; i++) {
+	//	m_waves.push_back(Gerstner(glm::vec2(random(), random()), random(5.0f), random(resolution), random(32)));
+	//}
 }
 
+//setting up the ocean surface
 Ocean::Ocean(uint32_t resolution, float tilesize)
 {
 	info("Setting up Ocean...");
@@ -91,20 +96,19 @@ Ocean::Ocean(uint32_t resolution, float tilesize)
 	succ("Ocean successfully initialized");
 }
 
+//returns surface vertices
 std::vector<Vertex> Ocean::getVertices()
 {
 	return m_vertices;
 }
 
+//returns surface indices
 std::vector<uint32_t> Ocean::getIndices()
 {
 	return m_indices;
 }
 
-//std::vector<glm::vec3> Ocean::getHeightmap()
-//{
-//}
-
+//applies all known waves and returns a vector containing all displacements necessary
 std::vector<Displacement> Ocean::update_waves(float time){
 	std::vector<Displacement> current_displacement = {};
 

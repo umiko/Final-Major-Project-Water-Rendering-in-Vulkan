@@ -7,7 +7,9 @@
 #include <glm/glm.hpp>
 #include <glm\vec2.hpp>
 #include <glm\vec3.hpp>
+
 #include "displacement.hpp"
+#include "helper.hpp"
 
 class Gerstner {
 	//variables are named like they are in the formulas in Tessendorfs

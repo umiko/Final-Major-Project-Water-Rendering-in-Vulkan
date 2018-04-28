@@ -7,6 +7,7 @@
 #include "vertex.hpp"
 #include "logger.hpp"
 #include "gerstner_waves.hpp"
+#include "helper.hpp"
 
 class Ocean
 {
