@@ -9,7 +9,7 @@ float Gerstner::get_phase_constant()
 //"Choppiness" of the wave
 float Gerstner::get_Q()
 {
-	return 0.5;
+	return 0.7;
 }
 
 //Tessendorf calls it K, everyone else w, its a bit confusing
