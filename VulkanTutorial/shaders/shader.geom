@@ -25,7 +25,7 @@ void main(void){
 		out_vertex_normal = normal;
 		out_color = in_color[i];
 		out_texture_coord = in_texture_coord[i];
-		out_light_direction = vec3(normalize(in_view[i] * vec4(-100, -100, 500, 1.0f)));
+		out_light_direction = vec3(normalize(in_view[i] * vec4(-100, -100, 2000, 1.0f)));
 		out_light_reflection = reflect(-out_light_direction, normal);
 		vert_position = gl_in[i].gl_Position.xyz;
 		EmitVertex();
