@@ -7,7 +7,6 @@
 
 #include <vulkan/vulkan.h>
 
-
 struct Vertex
 {
 	glm::vec3 position;

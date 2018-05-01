@@ -30,7 +30,6 @@
 #include "ocean.hpp"
 #include "displacement.hpp"
 
-
 //Vulkan works with queues to which commands need to be submitted.
 //commands can be recorded, stored and are executed when submitted to a queue.
 //Some queues are more suitable than others or can only offer certain features.
@@ -71,10 +70,10 @@ struct UniformBufferObject
 //The main application
 class Application
 {
-  public:
+public:
 	void run();
 
-  private:
+private:
 	const int WIDTH = 800;
 	const int HEIGHT = 600;
 	const char *WINDOW_TITLE = "Vulkan";
@@ -83,7 +82,7 @@ class Application
 	bool m_enable_wireframe = true;
 
 	uint32_t m_ocean_resolution = 256;
-	float m_time=0;
+	float m_time = 0;
 
 	Ocean* m_ocean;
 
@@ -140,11 +139,16 @@ class Application
 
 	VkSemaphore m_image_available_semaphore;
 	VkSemaphore m_render_finished_semaphore;
-
+#ifdef _DEBUG
 	const std::vector<const char *> validation_layers = {
-		"VK_LAYER_LUNARG_standard_validation", "VK_LAYER_LUNARG_monitor"};
+		"VK_LAYER_LUNARG_standard_validation", "VK_LAYER_LUNARG_monitor"
+	};
+#endif // DEBUG
+#ifndef _DEBUG
+	const std::vector<const char *> validation_layers = {};
+#endif // !DEBUG
 
-	const std::vector<const char *> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+	const std::vector<const char *> device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 	std::vector<Vertex> m_vertices = {
 		{ { -0.5f, -0.5f, 1.0f },{ 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
@@ -153,7 +157,7 @@ class Application
 	{ { -0.5f, 0.5f, 0.0f },{ 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
 	};
 
-	std::vector<uint32_t> m_indices{0, 1, 2, 2, 3, 0};
+	std::vector<uint32_t> m_indices{ 0, 1, 2, 2, 3, 0 };
 
 	std::vector<Displacement> m_displacements = {};
 

@@ -1,11 +1,8 @@
 #pragma once
 
-#define COLORMODE
-
 #include <fstream>
 #include <string>
 #include <vector>
-
 
 #include <vulkan\vulkan.h>
 

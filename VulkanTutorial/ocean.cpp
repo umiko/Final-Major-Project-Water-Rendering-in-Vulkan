@@ -2,7 +2,6 @@
 
 void Ocean::initializeVertices(uint32_t resolution)
 {
-
 	info("generating vertices");
 	m_vertices = {};
 	m_indices = {};
@@ -19,22 +18,21 @@ void Ocean::initializeVertices(uint32_t resolution)
 			row++;
 
 		m_vertices[column] = { {-0.5* tile_size + column % resolution * step, -0.5* tile_size + row * step, 0.0f}, {0.0f, .56f, 0.58f}, {texStep * column, texStep * row} };
-
 	}
 
 	info("generating indices");
 	//generate the indeces row by row in clockwise fashion
-	uint32_t a,b,c;
+	uint32_t a, b, c;
 	a = 0;
 	b = resolution;
 	c = 1;
 	for (int i = 0; a < overall_size && b < overall_size && c < overall_size; i++) {
 		//the way the indices are done requires this part
 		if (i % 2 == 0) {
-			c = a+1;
+			c = a + 1;
 		}
 		else {
-			c = b+1;
+			c = b + 1;
 		}
 		//end of row, jump to the next one
 		if (c % resolution == 0) {
@@ -65,8 +63,7 @@ void Ocean::initializeVertices(uint32_t resolution)
 //adds new gerstner waves to the ocean
 void Ocean::initializeWave(uint32_t resolution)
 {
-
-	//m_waves.push_back(Gerstner(glm::vec2(1.0f, 0.7f), 3.0f, 80.0f, 20.0f));	
+	//m_waves.push_back(Gerstner(glm::vec2(1.0f, 0.7f), 3.0f, 80.0f, 20.0f));
 	m_waves.push_back(Gerstner(glm::vec2(-0.50f, 3.0f), 1.20f, 32.0f, 40.4f));
 	//m_waves.push_back(Gerstner(glm::vec2(-2.0f, -3.0f), 1.30f, 120.0f, 30.4f));
 	m_waves.push_back(Gerstner(glm::vec2(2.0f, -4.0f), 1.40f, 26.0f, 15.4f));
@@ -109,7 +106,7 @@ std::vector<uint32_t> Ocean::getIndices()
 }
 
 //applies all known waves and returns a vector containing all displacements necessary
-std::vector<Displacement> Ocean::update_waves(float time){
+std::vector<Displacement> Ocean::update_waves(float time) {
 	std::vector<Displacement> current_displacement = {};
 
 	if (current_displacement.size() != m_vertices.size()) {

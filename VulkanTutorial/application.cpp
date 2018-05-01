@@ -37,7 +37,7 @@ int main()
 
 //Run the applications lifecycle
 void Application::run()
-{	
+{
 	configure_application();
 	initialize_window();
 	initialize_vulkan();
@@ -83,7 +83,6 @@ void Application::configure_application()
 		m_enable_wireframe = false;
 	}
 #endif // !_DEBUG
-
 }
 
 //get a window going using glfw
@@ -358,7 +357,7 @@ void Application::create_logical_device()
 
 	//TODO: outsource queue creation and queue stuff in some kind of queue manager
 	std::vector<VkDeviceQueueCreateInfo> queue_create_informations;
-	std::set<int> unique_queue_families = {indices.graphics_family, indices.presentation_family};
+	std::set<int> unique_queue_families = { indices.graphics_family, indices.presentation_family };
 
 	float queue_priority = 1.0f;
 	for (int queue_family : unique_queue_families)
@@ -441,7 +440,7 @@ void Application::create_swapchain()
 
 	//TODO: Get a dedicated transfer queue for better performance
 	QueueFamilyIndices indices = find_queue_families(m_physical_device);
-	uint32_t queue_family_indices[] = {(uint32_t)indices.graphics_family, (uint32_t)indices.presentation_family};
+	uint32_t queue_family_indices[] = { (uint32_t)indices.graphics_family, (uint32_t)indices.presentation_family };
 	if (indices.graphics_family != indices.presentation_family)
 	{
 		create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -566,7 +565,7 @@ void Application::create_descriptor_set_layout()
 	sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	//create the descriptor layout
-	std::array<VkDescriptorSetLayoutBinding, 2> bindings = {ubo_layout_binding, sampler_layout_binding};
+	std::array<VkDescriptorSetLayoutBinding, 2> bindings = { ubo_layout_binding, sampler_layout_binding };
 
 	VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {};
 	descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -619,7 +618,7 @@ void Application::create_graphics_pipeline()
 	frag_shader_stage_info.module = frag_shader_module;
 	frag_shader_stage_info.pName = "main";
 
-	VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, geom_shader_stage_info, frag_shader_stage_info};
+	VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_info, geom_shader_stage_info, frag_shader_stage_info };
 
 	//set up vertex input
 	auto vertex_binding_descriptions = Vertex::get_binding_description();
@@ -640,7 +639,7 @@ void Application::create_graphics_pipeline()
 	VkPipelineVertexInputStateCreateInfo vertex_input_create_info = {};
 	vertex_input_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertex_input_create_info.vertexBindingDescriptionCount = 2;
-	vertex_input_create_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attribute_descriptions.size()+displacement_attribute_descriptions.size());
+	vertex_input_create_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attribute_descriptions.size() + displacement_attribute_descriptions.size());
 
 	vertex_input_create_info.pVertexBindingDescriptions = input_binding_descriptions.data();
 	vertex_input_create_info.pVertexAttributeDescriptions = input_attribute_descriptions.data();
@@ -660,7 +659,7 @@ void Application::create_graphics_pipeline()
 	viewport.maxDepth = 1.0f;
 
 	VkRect2D scissor = {};
-	scissor.offset = {0, 0};
+	scissor.offset = { 0, 0 };
 	scissor.extent = m_swapchain_extent;
 
 	VkPipelineViewportStateCreateInfo viewport_state_create_info = {};
@@ -687,7 +686,6 @@ void Application::create_graphics_pipeline()
 	rasterization_state_create_info.depthBiasSlopeFactor = 0.0f;	// Optional
 
 	//TODO:Depth stencil goes here
-	
 
 	//configure multisampling for anti-aliasing
 	VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {};
@@ -724,7 +722,7 @@ void Application::create_graphics_pipeline()
 	//configure states that can be changed without pipeline recreation
 	VkDynamicState dynamic_states[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
-		VK_DYNAMIC_STATE_LINE_WIDTH};
+		VK_DYNAMIC_STATE_LINE_WIDTH };
 
 	VkPipelineDynamicStateCreateInfo dynamic_state_create_info = {};
 	dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -791,7 +789,7 @@ void Application::create_framebuffers()
 	for (size_t i = 0; i < m_swapchain_image_views.size(); i++)
 	{
 		VkImageView attachments[] = {
-			m_swapchain_image_views[i]};
+			m_swapchain_image_views[i] };
 
 		VkFramebufferCreateInfo framebuffer_create_info = {};
 		framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -973,7 +971,6 @@ void Application::create_displacement_buffer()
 	VkDeviceSize buffer_size = sizeof(Displacement) * m_vertices.size();
 
 	create_buffer(buffer_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_displacement_buffer, m_displacement_memory);
-
 }
 
 //create the uniform buffer
@@ -1015,7 +1012,7 @@ void Application::create_descriptor_set()
 {
 	info("Creating Descriptor Set...");
 	//define the layout
-	VkDescriptorSetLayout descriptor_set_layouts[] = {m_descriptor_set_layout};
+	VkDescriptorSetLayout descriptor_set_layouts[] = { m_descriptor_set_layout };
 	VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {};
 	descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	descriptor_set_allocate_info.descriptorPool = m_descriptor_pool;
@@ -1095,10 +1092,10 @@ void Application::create_command_buffers()
 		render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		render_pass_begin_info.renderPass = m_render_pass;
 		render_pass_begin_info.framebuffer = m_swapchain_framebuffers[i];
-		render_pass_begin_info.renderArea.offset = {0, 0};
+		render_pass_begin_info.renderArea.offset = { 0, 0 };
 		render_pass_begin_info.renderArea.extent = m_swapchain_extent;
 
-		VkClearValue clear_value = {0.0f, 0.0f, 0.0f, 1.0f};
+		VkClearValue clear_value = { 0.0f, 0.0f, 0.0f, 1.0f };
 		render_pass_begin_info.clearValueCount = 1;
 		render_pass_begin_info.pClearValues = &clear_value;
 
@@ -1107,8 +1104,8 @@ void Application::create_command_buffers()
 		vkCmdBindPipeline(m_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
 
 		VkBuffer vertex_buffers[] = { m_vertex_buffer };
-		VkBuffer displacement_buffers[] = {m_displacement_buffer};
-		VkDeviceSize offsets[] = {0};
+		VkBuffer displacement_buffers[] = { m_displacement_buffer };
+		VkDeviceSize offsets[] = { 0 };
 
 		vkCmdBindVertexBuffers(m_command_buffers[i], 0, 1, vertex_buffers, offsets);
 		vkCmdBindVertexBuffers(m_command_buffers[i], 1, 1, displacement_buffers, offsets);
@@ -1163,9 +1160,9 @@ void Application::draw_frame()
 	VkSubmitInfo submit_info = {};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-	VkSemaphore wait_semaphores[] = {m_image_available_semaphore};
+	VkSemaphore wait_semaphores[] = { m_image_available_semaphore };
 
-	VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+	VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submit_info.waitSemaphoreCount = 1;
 	submit_info.pWaitSemaphores = wait_semaphores;
 	submit_info.pWaitDstStageMask = wait_stages;
@@ -1173,7 +1170,7 @@ void Application::draw_frame()
 	submit_info.commandBufferCount = 1;
 	submit_info.pCommandBuffers = &m_command_buffers[image_index];
 
-	VkSemaphore signal_semaphores[] = {m_render_finished_semaphore};
+	VkSemaphore signal_semaphores[] = { m_render_finished_semaphore };
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores = signal_semaphores;
 	if (vkQueueSubmit(m_graphics_queue, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS)
@@ -1187,7 +1184,7 @@ void Application::draw_frame()
 	present_info.waitSemaphoreCount = 1;
 	present_info.pWaitSemaphores = signal_semaphores;
 
-	VkSwapchainKHR swapchains[] = {m_swapchain};
+	VkSwapchainKHR swapchains[] = { m_swapchain };
 	present_info.swapchainCount = 1;
 	present_info.pSwapchains = swapchains;
 	present_info.pImageIndices = &image_index;
@@ -1204,8 +1201,6 @@ void Application::draw_frame()
 	{
 		throw std::runtime_error("Failed to present swapchain image");
 	}
-
-	
 }
 
 //update uniform buffer objects with fresh values
@@ -1567,8 +1562,8 @@ void Application::copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t 
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = 1;
 
-	region.imageOffset = {0, 0, 0};
-	region.imageExtent = {width, height, 1};
+	region.imageOffset = { 0, 0, 0 };
+	region.imageExtent = { width, height, 1 };
 
 	vkCmdCopyBufferToImage(command_buffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
@@ -1743,16 +1738,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Application::debug_callback(VkDebugReportFlagsEXT
 //handles window resizing
 void Application::on_window_resized(GLFWwindow *window, int width, int height)
 {
-
 	Application *app = reinterpret_cast<Application *>(glfwGetWindowUserPointer(window));
 	app->recreate_swapchain();
 }
 
-	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	////
-	////							Selection Functions
-	////
-	/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////							Selection Functions
+////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma region Selection Functions
 
@@ -1762,7 +1756,7 @@ VkSurfaceFormatKHR Application::choose_swapchain_surface_format(const std::vecto
 	info("Choosing surface format...");
 	if (available_formats.size() == 1 && available_formats[0].format == VK_FORMAT_UNDEFINED)
 	{
-		return {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+		return { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 	}
 
 	for (const VkSurfaceFormatKHR &available_format : available_formats)
@@ -1808,7 +1802,7 @@ VkExtent2D Application::choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &
 	{
 		int width, height;
 		glfwGetWindowSize(m_window, &width, &height);
-		VkExtent2D actual_extent = {width, height};
+		VkExtent2D actual_extent = { width, height };
 		actual_extent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actual_extent.width));
 		actual_extent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actual_extent.height));
 		return actual_extent;
@@ -1816,17 +1810,17 @@ VkExtent2D Application::choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &
 }
 #pragma endregion
 
-	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	////
-	////							Proxy Functions
-	////
-	/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////							Proxy Functions
+////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	////
-	////							Cleanup
-	////
-	/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////							Cleanup
+////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma region Clean Up
 

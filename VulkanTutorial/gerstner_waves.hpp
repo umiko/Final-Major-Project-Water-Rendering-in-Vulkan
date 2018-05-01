@@ -26,12 +26,12 @@ private:
 	const float PI = 3.14;
 
 	float speed;
-	
+
 	float get_phase_constant();
 
 	float get_Q();
 	//frequency of the waves
-	//w^2(k) = g * K 
+	//w^2(k) = g * K
 	float get_w();
 	//magnitude
 	//K=2PI/wavelength
@@ -44,5 +44,4 @@ public:
 
 	//Applies this wave on top of a wavemap
 	std::vector<Displacement> apply_wave(std::vector<Displacement> current_displacement, uint32_t resolution, float tilesize, float time);
-	
 };

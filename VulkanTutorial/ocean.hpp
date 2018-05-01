@@ -21,7 +21,6 @@ class Ocean
 	void initializeVertices(uint32_t resolution);
 	void initializeWave(uint32_t resolution);
 
-
 public:
 	uint32_t resolution;
 
@@ -31,4 +30,3 @@ public:
 	//std::vector<glm::vec3> getHeightmap();
 	std::vector<Displacement> update_waves(float time);
 };
-

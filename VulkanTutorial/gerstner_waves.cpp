@@ -1,6 +1,5 @@
 #include "gerstner_waves.hpp"
 
-
 float Gerstner::get_phase_constant()
 {
 	return speed * 2 / lambda;
@@ -34,7 +33,7 @@ glm::vec3 Gerstner::get_displacement(glm::vec2 x0, glm::vec3 displacement)
 
 	float x = displacement.x + (get_Q()*A*k.x*cosf(get_w()*glm::dot(k, x0) + get_phase_constant()*time));
 	float y = displacement.y + (get_Q()*A*k.y*cosf(get_w()*glm::dot(k, x0) + get_phase_constant()*time));
-	float z = displacement.z + A*sinf(get_w()*glm::dot(k, x0)+get_phase_constant()*time);
+	float z = displacement.z + A * sinf(get_w()*glm::dot(k, x0) + get_phase_constant()*time);
 
 	return glm::vec3(x, y, z);
 
@@ -47,7 +46,6 @@ glm::vec3 Gerstner::get_displacement(glm::vec2 x0, glm::vec3 displacement)
 	/*float x = ((k.x/get_K())*A*k.x * cosf(get_w()*glm::dot(k, x0) -get_w() * time + get_phase_constant()));
 	float y = ((k.x / get_K())*A*k.y * cosf(get_w()*glm::dot(k, x0) - get_w() * time + get_phase_constant()));
 	float z = A * sinf(get_w()*glm::dot(k, x0) + get_phase_constant()*time);*/
-
 }
 
 //a new and fresh gerstner wave
@@ -56,7 +54,7 @@ Gerstner::Gerstner(glm::vec2 wave_direction, float amplitude, float wavelength, 
 	this->k = glm::normalize(wave_direction);
 	this->A = amplitude;
 	this->lambda = wavelength;
-	this->speed = 10*sqrtf(g*((2 * PI) / lambda));
+	this->speed = 10 * sqrtf(g*((2 * PI) / lambda));
 }
 
 //Applies this wave on top of a wavemap
@@ -64,14 +62,14 @@ std::vector<Displacement> Gerstner::apply_wave(std::vector<Displacement> current
 	this->time = time;
 	uint32_t size = resolution * resolution;
 	float step = tilesize / resolution;
-	
+
 	std::vector<Displacement> new_displacement = { {} };
 	new_displacement.resize(size);
 
 	glm::vec2 x0;
 
-	for (int i = 0; i < size; i++) {
-		//get undisturbed vertex position 
+	for (uint32_t i = 0; i < size; i++) {
+		//get undisturbed vertex position
 		x0 = glm::vec2(i%resolution, floorf(i / resolution));
 		glm::vec3 displacement = get_displacement(x0, current_displacement[i].displacement);
 		//new_displacement[i] = { current_displacement[i].displacement + displacement * step };

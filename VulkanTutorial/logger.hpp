@@ -1,6 +1,8 @@
 #pragma once
 #define COLORMODE
 
+#include <iostream>
+
 #ifdef COLORMODE
 //windows likes to redefine standard functions. bad dog
 #define NOMINMAX
