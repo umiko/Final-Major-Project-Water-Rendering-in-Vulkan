@@ -118,9 +118,9 @@ void Application::initialize_vulkan()
 	create_framebuffers();
 	create_command_pool();
 
-	create_texture_image();
-	create_texture_image_view();
-	create_texture_sampler();
+	//create_texture_image();
+	//create_texture_image_view();
+	//create_texture_sampler();
 
 	create_vertex_buffer();
 	create_index_buffer();
@@ -1030,12 +1030,12 @@ void Application::create_descriptor_set()
 	descriptor_buffer_info.offset = 0;
 	descriptor_buffer_info.range = sizeof(UniformBufferObject);
 
-	VkDescriptorImageInfo descriptor_image_info = {};
+	/*VkDescriptorImageInfo descriptor_image_info = {};
 	descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	descriptor_image_info.imageView = m_texture_image_view;
-	descriptor_image_info.sampler = m_texture_sampler;
+	descriptor_image_info.sampler = m_texture_sampler;*/
 
-	std::array<VkWriteDescriptorSet, 2> write_descriptor_sets = {};
+	std::array<VkWriteDescriptorSet, 1> write_descriptor_sets = {};
 	write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write_descriptor_sets[0].dstSet = m_descriptor_set;
 	write_descriptor_sets[0].dstBinding = 0;
@@ -1044,13 +1044,13 @@ void Application::create_descriptor_set()
 	write_descriptor_sets[0].descriptorCount = 1;
 	write_descriptor_sets[0].pBufferInfo = &descriptor_buffer_info;
 
-	write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	/*write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write_descriptor_sets[1].dstSet = m_descriptor_set;
 	write_descriptor_sets[1].dstBinding = 1;
 	write_descriptor_sets[1].dstArrayElement = 0;
 	write_descriptor_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	write_descriptor_sets[1].descriptorCount = 1;
-	write_descriptor_sets[1].pImageInfo = &descriptor_image_info;
+	write_descriptor_sets[1].pImageInfo = &descriptor_image_info;*/
 
 	vkUpdateDescriptorSets(m_logical_device, static_cast<uint32_t>(write_descriptor_sets.size()), write_descriptor_sets.data(), 0, nullptr);
 
