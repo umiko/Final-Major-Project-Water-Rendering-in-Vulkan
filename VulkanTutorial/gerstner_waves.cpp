@@ -35,8 +35,6 @@ glm::vec3 Gerstner::get_displacement(glm::vec2 x0, glm::vec3 displacement)
 	float y = displacement.y + (get_Q()*A*k.y*cosf(get_w()*glm::dot(k, x0) + get_phase_constant()*time));
 	float z = displacement.z + A * sinf(get_w()*glm::dot(k, x0) + get_phase_constant()*time);
 
-	return glm::vec3(x, y, z);
-
 	//attempts that are obsolete or implemented slightly different above
 
 	/*float x = (get_Q()*A*k.x * cosf(get_w()*glm::dot(k, x0) + get_phase_constant()*time));
@@ -46,6 +44,8 @@ glm::vec3 Gerstner::get_displacement(glm::vec2 x0, glm::vec3 displacement)
 	/*float x = ((k.x/get_K())*A*k.x * cosf(get_w()*glm::dot(k, x0) -get_w() * time + get_phase_constant()));
 	float y = ((k.x / get_K())*A*k.y * cosf(get_w()*glm::dot(k, x0) - get_w() * time + get_phase_constant()));
 	float z = A * sinf(get_w()*glm::dot(k, x0) + get_phase_constant()*time);*/
+
+	return glm::vec3(x, y, z);
 }
 
 //a new and fresh gerstner wave

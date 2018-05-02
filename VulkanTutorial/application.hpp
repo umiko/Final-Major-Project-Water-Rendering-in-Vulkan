@@ -143,8 +143,7 @@ private:
 	const std::vector<const char *> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation", "VK_LAYER_LUNARG_monitor"
 	};
-#endif // DEBUG
-#ifndef _DEBUG
+#else
 	const std::vector<const char *> validation_layers = {};
 #endif // !DEBUG
 

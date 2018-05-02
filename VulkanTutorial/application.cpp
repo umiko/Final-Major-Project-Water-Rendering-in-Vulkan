@@ -1881,6 +1881,9 @@ void Application::clean_up()
 	vkDestroyInstance(m_instance, nullptr);
 
 	glfwDestroyWindow(m_window);
+
+	delete m_ocean;
+
 	glfwTerminate();
 	succ("Cleanup complete");
 }
