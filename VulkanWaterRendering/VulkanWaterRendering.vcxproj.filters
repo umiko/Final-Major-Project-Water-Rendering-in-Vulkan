@@ -67,5 +67,11 @@
     <None Include="shaders\shader.vert">
       <Filter>Source Files\shader</Filter>
     </None>
+    <None Include="shaders\geom.spv">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\shader.geom">
+      <Filter>Source Files\shader</Filter>
+    </None>
   </ItemGroup>
 </Project>
