@@ -1,4 +1,4 @@
-C:\VulkanSDK\1.1.70.1\Bin32\glslangValidator -V shader.vert
-C:\VulkanSDK\1.1.70.1\Bin32\glslangValidator -V shader.geom
-C:\VulkanSDK\1.1.70.1\Bin32\glslangValidator -V shader.frag
+%VULKAN_SDK%\Bin\glslangValidator -V shader.vert
+%VULKAN_SDK%\Bin\glslangValidator -V shader.geom
+%VULKAN_SDK%\Bin\glslangValidator -V shader.frag
 pause
